@@ -1,7 +1,7 @@
 <script setup>
 import Versions from './components/Versions.vue'
 
-const ipcHandle = () => window.electron.ipcRenderer.send('ping')
+const ipcHandle = (action) => window.electron.ipcRenderer.send(action)
 </script>
 
 <template>
@@ -17,7 +17,10 @@ const ipcHandle = () => window.electron.ipcRenderer.send('ping')
       <a href="https://electron-vite.org/" target="_blank" rel="noreferrer">Documentation</a>
     </div>
     <div class="action">
-      <a target="_blank" rel="noreferrer" @click="ipcHandle">Send IPC</a>
+      <a target="_blank" rel="noreferrer" @click="ipcHandle('ping')">Send IPC</a>
+    </div>
+    <div class="action">
+      <a target="_blank" rel="noreferrer" @click="ipcHandle('save_log')">Save Log</a>
     </div>
   </div>
   <Versions />

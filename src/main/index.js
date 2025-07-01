@@ -2,6 +2,9 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import Logger from '../../resources/model/logger.js'
+
+const logger = new Logger().log.scope('main')
 
 function createWindow() {
   // Create the browser window.
@@ -51,7 +54,10 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
-
+  ipcMain.on('save_log', () => {
+    logger.info('This is an info log')
+    logger.error('This is an error log')
+  })
   createWindow()
 
   app.on('activate', function () {
