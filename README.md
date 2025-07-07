@@ -15,8 +15,10 @@ An Electron application with Vue
 
 ```bash
 $ npm install
+$ npm install less
+$ npm install @ionic/vue
 $ npm install electron-log
-
+$ npm install vue-router@4
 ```
 
 ### Development
