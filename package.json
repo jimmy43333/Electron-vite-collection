@@ -20,7 +20,10 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^3.0.0",
-    "electron-log": "^5.4.1"
+    "@ionic/vue": "^8.6.3",
+    "electron-log": "^5.4.1",
+    "less": "^4.3.0",
+    "vue-router": "^4.5.1"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^1.0.2",

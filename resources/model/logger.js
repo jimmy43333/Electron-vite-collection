@@ -1,5 +1,5 @@
 const log = require('electron-log')
-import { myvariable } from '../../resources/model/my_variable.js'
+import { myvariable } from '../../resources/data/my_variable.js'
 
 // log.transports.file.resolvePathFn = () => path.join(__dirname, 'ats_desktop.log')
 

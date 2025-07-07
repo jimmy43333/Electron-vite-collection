@@ -180,3 +180,19 @@ code {
 ::-webkit-scrollbar-thumb {
   background: rgba(95, 158, 160, 0.1);
 }
+
+button {
+  cursor: pointer;
+  border: none;
+  background-color: rgba(50, 50, 50);
+  color: var(--ev-c-text-1);
+  font-size: 16px;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 4px;
+  margin: 5px;
+}
+
+button:hover {
+  background-color: #202127;
+}

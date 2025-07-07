@@ -17,15 +17,20 @@
       <a target="_blank" rel="noreferrer" @click="ipcHandle('save_log')">Save Log</a>
     </div>
     <div class="action">
-      <RouterLink to="vue-router">vue-router</RouterLink>
+      <RouterLink to="/vueRouterDemo">vue-router</RouterLink>
     </div>
   </div>
   <Versions />
   <div v-if="$route.path != '/'" class="router-viewer-container">
     <RouterView />
   </div>
+  <RouterLink to="/" class="home-click">
+    <ion-icon :icon="home" class="panel-icon" />
+  </RouterLink>
 </template>
 <script setup>
+import { IonIcon } from '@ionic/vue'
+import { home } from 'ionicons/icons'
 import Versions from './components/Versions.vue'
 import { RouterView, RouterLink } from 'vue-router'
 

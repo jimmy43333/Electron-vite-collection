@@ -1,14 +1,12 @@
 <template>
-  <RouterLink to="/" class="home-click">
-    <ion-icon :icon="home" class="panel-icon" />
-  </RouterLink>
+  <div class="empty-content">
+    <h1>Nothing to see here</h1>
+    <p>This is an empty component.</p>
+  </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
-import { IonIcon } from '@ionic/vue'
-import { home } from 'ionicons/icons'
+import { onMounted, ref } from 'vue'
 
 onMounted(() => {
   console.log(' component mounted')
