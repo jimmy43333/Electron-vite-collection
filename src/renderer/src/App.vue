@@ -43,7 +43,7 @@ const ipcHandle = (action) => window.electron.ipcRenderer.send(action)
   position: absolute;
   top: 0;
   left: 0;
-  background-color: #8a817c;
+  background-color: #3c4763;
 }
 
 .home-click {

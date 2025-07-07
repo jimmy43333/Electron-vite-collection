@@ -1,10 +1,10 @@
 <template>
-  <h2>Progress with click button:</h2>
+  <h2>Progress with click button</h2>
   <button @click="move_progress">Move</button>
   <div id="normal-progress">
     <div id="normal-progress-bar"></div>
   </div>
-  <h2>Progress with Main ipcMain send:</h2>
+  <h2>Progress with ipcMain</h2>
   <button @click="start_flowing_progress">Start</button>
   <button @click="reset_flowing_progress">Reset</button>
   <div class="flow-progress">
@@ -41,7 +41,6 @@ function move(persentage) {
   var elem = document.getElementById('normal-progress-bar')
   if (persentage == 0) {
     elem.style.width = '0%'
-    message.value = ''
     return
   }
   var parent = elem.parentNode
@@ -267,10 +266,10 @@ window.electron.ipcRenderer.on('update_flowing_progress', (event, arg) => {
 
   &-text {
     width: 1000px;
+    font-weight: 600;
     line-height: 30px;
     padding: 0 10px;
-    color: black;
-    background-color: #af71af;
+    color: #030303;
   }
 }
 </style>

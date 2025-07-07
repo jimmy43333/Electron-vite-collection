@@ -74,10 +74,12 @@ a {
 }
 
 a.router-link-exact-active {
-  color: tomato;
+  background: linear-gradient(315deg, #42d392 25%, #647eff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .touch:hover {
-  color: tomato;
+  color: #647eff;
 }
 </style>
