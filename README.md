@@ -19,6 +19,10 @@ $ npm install less
 $ npm install @ionic/vue
 $ npm install electron-log
 $ npm install vue-router@4
+$ npm install xterm
+$ npm install xterm-addon-fit
+$ npm install tail
+$ npm install chokidar
 ```
 
 ### Development

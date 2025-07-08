@@ -1,6 +1,17 @@
 <template>
-  <div class="term" @wheel.prevent>
-    <div ref="xterm" @keyup.ctrl.c="handleCopy"></div>
+  <div class="terminal-outer">
+    <h2>Update Terminal with watch files</h2>
+    <div class="input-group-sm mb-2">
+      <input id="t-m-s" v-model="mode" type="radio" class="btn-check" value="Stop" />
+      <label class="btn btn-outline-secondary group-buttons" for="t-m-s">Stop</label>
+      <input id="t-m-r" v-model="mode" type="radio" class="btn-check" value="Refresh" />
+      <label class="btn btn-outline-secondary group-buttons" for="t-m-r">Refresh</label>
+      <input id="t-m-a" v-model="mode" type="radio" class="btn-check" value="Append" />
+      <label class="btn btn-outline-secondary group-buttons" for="t-m-a">Append</label>
+    </div>
+    <div class="term" @wheel.prevent>
+      <div ref="xterm" @keyup.ctrl.c="handleCopy"></div>
+    </div>
   </div>
   <!-- <div class="clear_button" @dblclick="clear_viewer">CLEAR</div> -->
 </template>
@@ -17,6 +28,7 @@ const xterm = ref(null)
 const scroll_event = ref(null)
 const scroll_flag = ref(false)
 const current_line = ref(0)
+const mode = ref('Stop')
 
 let terminal = new Terminal({
   allowTransparency: true,
@@ -34,7 +46,6 @@ let terminal = new Terminal({
 })
 
 const fiton = new FitAddon()
-
 const debouncedResize = debounce(() => {
   fiton.fit()
   console.log('Terminal resized to fit the container.')
@@ -59,12 +70,6 @@ const handleCopy = (e) => {
     e.preventDefault()
   }
 }
-
-const props = defineProps({
-  namespace: String,
-  viewertype: String,
-  viewerSubtype: String
-})
 
 const refresh_viewer = (event, content) => {
   let lines = content.split('\n')
@@ -99,68 +104,44 @@ const append_viewer = (event, content) => {
   fiton.fit()
 }
 
-let ipcID = `update_result_${props.namespace}_Count`
-window.electron.ipcRenderer.on(ipcID, refresh_viewer)
+window.electron.ipcRenderer.on('update_refresh', refresh_viewer)
+window.electron.ipcRenderer.on('update_append', append_viewer)
 
-ipcID = `update_result_${props.namespace}_Value`
-window.electron.ipcRenderer.on(ipcID, refresh_viewer)
-
-ipcID = `update_result_${props.namespace}_Device`
-window.electron.ipcRenderer.on(ipcID, refresh_viewer)
-
-ipcID = `update_result_${props.namespace}_Failure`
-window.electron.ipcRenderer.on(ipcID, append_viewer)
-
-ipcID = `update_result_${props.namespace}_HeartBeat`
-window.electron.ipcRenderer.on(ipcID, append_viewer)
-
-ipcID = `update_result_${props.namespace}_Summary`
-window.electron.ipcRenderer.on(ipcID, append_viewer)
+watch(
+  mode,
+  async (newMode, oldMode) => {
+    console.log('Terminal mode changed:', oldMode, '→', newMode)
+    if (mode.value == 'Refresh') {
+      if (!scroll_event.value) {
+        scroll_event.value = terminal.onScroll(handleScroll)
+      }
+    } else {
+      if (scroll_event.value) {
+        scroll_event.value.dispose()
+        scroll_event.value = null
+      }
+    }
+    await window.electron.ipcRenderer.send('terminal_control', 'stop', oldMode)
+    terminal.reset()
+    setTimeout(async () => {
+      terminal.clear()
+      await window.electron.ipcRenderer.send('terminal_control', 'start', newMode)
+    }, 300)
+  },
+  { deep: true, immediate: false }
+)
 
 onMounted(async () => {
   terminal.loadAddon(fiton)
   terminal.open(xterm.value)
-  terminal.resize(terminal.cols, 30)
+  terminal.resize(terminal.cols, 10)
   scroll_event.value = terminal.onScroll(handleScroll)
-
-  let data = JSON.stringify(props)
-  await window.electron.ipcRenderer.send('running_update_viewer', 'start', data)
   window.addEventListener('resize', debouncedResize)
-  watch(
-    () => [props.viewertype, props.viewerSubtype],
-    async ([new_data1, new_data2], [old_data1, old_data2]) => {
-      let data = JSON.stringify({
-        namespace: props.namespace,
-        viewertype: old_data1,
-        viewerSubtype: old_data2
-      })
-      if (props.viewertype == 'Count' || props.viewertype == 'Value') {
-        if (!scroll_event.value) {
-          scroll_event.value = terminal.onScroll(handleScroll)
-        }
-      } else {
-        if (scroll_event.value) {
-          scroll_event.value.dispose()
-          scroll_event.value = null
-        }
-      }
-      await window.electron.ipcRenderer.send('running_update_viewer', 'stop', data)
-      terminal.reset()
-      setTimeout(async () => {
-        terminal.clear()
-        data = JSON.stringify(props)
-        await window.electron.ipcRenderer.send('running_update_viewer', 'start', data)
-      }, 300)
-    },
-    { deep: true, immediate: false }
-  )
   console.log('Terminal Mounted Completed')
 })
 
 onBeforeUnmount(async () => {
   console.log('UnBeforeUnmount')
-  let data = JSON.stringify(props)
-  await window.electron.ipcRenderer.send('running_update_viewer', 'stop', data)
   window.removeEventListener('resize', debouncedResize)
   if (scroll_event.value) {
     scroll_event.value.dispose()
@@ -171,12 +152,21 @@ onBeforeUnmount(async () => {
 </script>
 
 <style lang="less">
+.terminal-outer {
+  position: relative;
+  width: 100%;
+  min-height: 300px;
+  padding: 10px;
+  overflow-y: hidden;
+}
+
 .term {
   width: 100%;
   padding: 5px;
-  min-height: 520px;
+  min-height: 300px;
   overflow-x: hidden;
   overflow-y: scroll;
+  user-select: text;
 }
 
 .clear_button {
@@ -193,5 +183,9 @@ onBeforeUnmount(async () => {
   &:hover {
     color: #444444;
   }
+}
+
+.group-buttons {
+  font-weight: 600;
 }
 </style>

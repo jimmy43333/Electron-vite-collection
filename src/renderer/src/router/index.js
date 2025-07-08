@@ -4,6 +4,7 @@ import ProgressBar from '../components/VueRouter/ProgressBar.vue'
 import VueTransition from '../components/VueRouter/VueTransition.vue'
 import VirtualScroll from '../components/VueRouter/VirtualScroll.vue'
 import Table from '../components/VueRouter/Table.vue'
+import Terminal from '../components/Terminal.vue'
 
 const routes = [
   {
@@ -37,6 +38,11 @@ const routes = [
         component: Table
       }
     ]
+  },
+  {
+    path: '/terminal',
+    name: 'Terminal',
+    component: Terminal
   },
   {
     path: '/:p(.*)/index.html',

@@ -17,7 +17,10 @@
       <a target="_blank" rel="noreferrer" @click="ipcHandle('save_log')">Save Log</a>
     </div>
     <div class="action">
-      <RouterLink to="/vueRouterDemo">vue-router</RouterLink>
+      <RouterLink to="/vueRouterDemo">Vue-router</RouterLink>
+    </div>
+    <div class="action">
+      <RouterLink to="/terminal">Terminal</RouterLink>
     </div>
   </div>
   <Versions />
