@@ -23,6 +23,7 @@
     "@ionic/vue": "^8.6.3",
     "bootstrap": "^5.3.7",
     "chokidar": "^4.0.3",
+    "electron-json-storage": "^4.6.0",
     "electron-log": "^5.4.1",
     "less": "^4.3.0",
     "tail": "^2.2.6",

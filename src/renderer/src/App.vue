@@ -22,6 +22,9 @@
     <div class="action">
       <RouterLink to="/terminal">Terminal</RouterLink>
     </div>
+    <div class="action">
+      <RouterLink to="/saveJson">Electron Json Storage</RouterLink>
+    </div>
   </div>
   <Versions />
   <div v-if="$route.path != '/'" class="router-viewer-container">

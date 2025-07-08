@@ -61,7 +61,7 @@ onMounted(() => {
   position: fixed;
   left: 200px;
   top: 0;
-  width: 75%;
+  width: 70%;
   height: 90%;
   margin: 10px;
   padding: 10px;

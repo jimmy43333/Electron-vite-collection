@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import { myvariable } from '../../resources/data/my_variable.js'
 import Logger from '../../resources/model/logger.js'
 import FileWatcher from '../../resources/model/fileWatcher.js'
+import * as jsonStorage from '../../resources/model/jsonStorage.js'
 
 const logger = new Logger().log.scope('main')
 let mainWindow
@@ -12,8 +13,8 @@ let mainWindow
 function createWindow() {
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 800,
+    height: 600,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -124,5 +125,19 @@ function IPChandlers() {
       }, 2000)
     }
     event.reply('terminal_response', `Command received: ${command}`)
+  })
+
+  // electron-json-storage
+  ipcMain.on('get_electron_json_storage', async (event, key) => {
+    event.returnValue = await jsonStorage.getElectronJsonStorage(key)
+  })
+
+  ipcMain.on('set_electron_json_storage', async (event, key, data) => {
+    let dataToSave = JSON.parse(data)
+    event.returnValue = await jsonStorage.setElectronJsonStorage(key, dataToSave)
+  })
+
+  ipcMain.on('remove_electron_json_storage', async (event, key) => {
+    event.returnValue = await jsonStorage.removeElectronJsonStorage(key)
   })
 }

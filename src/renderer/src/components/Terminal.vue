@@ -156,7 +156,7 @@ onBeforeUnmount(async () => {
   position: relative;
   width: 100%;
   min-height: 300px;
-  padding: 10px;
+  padding: 50px;
   overflow-y: hidden;
 }
 

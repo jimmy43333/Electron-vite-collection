@@ -4,6 +4,9 @@ An Electron application with Vue
 
 ## 🚀 Features
 - How to save log
+- Vue-router
+- Watch or Tail file data update to xterm.js terminal
+- Save data to electron-json-storage
 
 ## Recommended IDE Setup
 
@@ -23,6 +26,7 @@ $ npm install xterm
 $ npm install xterm-addon-fit
 $ npm install tail
 $ npm install chokidar
+$ npm install electron-json-storage
 ```
 
 ### Development

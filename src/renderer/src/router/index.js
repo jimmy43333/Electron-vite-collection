@@ -5,6 +5,7 @@ import VueTransition from '../components/VueRouter/VueTransition.vue'
 import VirtualScroll from '../components/VueRouter/VirtualScroll.vue'
 import Table from '../components/VueRouter/Table.vue'
 import Terminal from '../components/Terminal.vue'
+import SaveJson from '../components/SaveJson.vue'
 
 const routes = [
   {
@@ -43,6 +44,11 @@ const routes = [
     path: '/terminal',
     name: 'Terminal',
     component: Terminal
+  },
+  {
+    path: '/saveJson',
+    name: 'Electron Json Storage',
+    component: SaveJson
   },
   {
     path: '/:p(.*)/index.html',
