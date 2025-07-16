@@ -29,13 +29,13 @@ $ npm install chokidar
 $ npm install electron-json-storage
 ```
 
-### Development
+#### Development
 
 ```bash
 $ npm run dev
 ```
 
-### Build
+#### Build
 
 ```bash
 # For windows
