@@ -10,6 +10,7 @@ class Logger {
     this.log.transports.file.resolvePathFn = () => folder_path
     this.log.transports.file.format = '{y}-{m}-{d} {h}:{i}:{s} {scope} | {text}'
     this.log.transports.file.level = process.env.NODE_ENV === 'test' ? false : 'info'
+    this.log.transports.console.level = false
   }
 }
 
