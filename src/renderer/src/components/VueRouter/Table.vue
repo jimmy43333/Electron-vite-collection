@@ -1,5 +1,6 @@
 <template>
   <div class="table-container">
+    <h2>Example 1</h2>
     <div class="grid-table">
       <div class="header">Header 1</div>
       <div class="grid-inside">
@@ -15,6 +16,7 @@
       <div class="cell">Row 1, Col 1</div>
     </div>
 
+    <h2>Example 2</h2>
     <div class="outbox">
       <div class="inbox">
         <div v-for="i in 10" :key="i" class="content">
@@ -28,32 +30,35 @@
       </div>
     </div>
 
-    <div class="outbox2">
-      <div class="inbox2">
+    <h2>Example 3</h2>
+    <div class="outbox-3">
+      <div class="inbox-3-left">
         <button @click="panel_flag = true">Open panel</button>
-        <div class="content-box">
-          <div class="content2">
-            <p>Inbox Message 1</p>
-            <p>{{ long_message }}</p>
-            <p>{{ long_message }}</p>
-            <p>{{ long_message }}</p>
-            <p>{{ long_message }}</p>
-            <p>{{ long_message }}</p>
-          </div>
-          <div class="content3">
-            <p>Inbox Message 2</p>
-            <p>{{ long_message }}</p>
-            <p>{{ long_message }}</p>
-            <p>{{ long_message }}</p>
-            <p>{{ long_message }}</p>
-          </div>
+        <div class="content-aside">
+          <p>Inbox Message 1</p>
+          <p>{{ long_message }}</p>
+        </div>
+        <div class="content-middle">
+          <p>Inbox Message 2</p>
+          <p>{{ long_message }}</p>
+          <p>{{ long_message }}</p>
+          <p>{{ long_message }}</p>
+          <p>{{ long_message }}</p>
+          <p>{{ long_message }}</p>
+          <p>{{ long_message }}</p>
+        </div>
+        <div class="content-aside">
+          <div>Inbox Message 3</div>
+          <div>{{ long_message }}</div>
+          <div>{{ long_message }}</div>
         </div>
       </div>
-      <div v-if="panel_flag" class="control-panel">
+      <div v-if="panel_flag" class="inbox-3-right">
         <button @click="panel_flag = false">Close panel</button>
       </div>
     </div>
 
+    <h2>Example 4</h2>
     <div class="dut-version-box">
       <div class="dut-version-scroll-controls">
         <button class="scroll-btn" @click="scrollDutVersion('left')">&lt;</button>
@@ -134,84 +139,92 @@ function scrollDutVersion(direction) {
   text-align: center;
 }
 
+// Example 2 //////////////////////////////////////
 .outbox {
-  width: 80%;
-  height: 300px;
-  background-color: #0f1044;
-  border: 1px solid #ccc;
+  width: 90%;
+  height: 400px;
   margin: 20px 0px;
   padding: 5px;
+  background-color: #1d65a6;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
   overflow: scroll;
-  white-space: nowrap;
-  position: relative;
 }
 
 .inbox {
   width: auto;
   height: auto;
+  background-color: #72a2c0;
+  box-sizing: border-box;
+  overflow-x: scroll;
   display: flex;
   align-items: center;
-  overflow-x: scroll;
-  background-color: rgba(255, 238, 0, 0.432);
 }
 
 .content {
-  min-width: 150px;
-  background-color: rgb(0, 0, 0);
+  min-width: 200px;
   margin: 10px;
+  box-sizing: border-box;
+  background-color: #192e5b;
+  overflow-x: visible;
   display: flex;
   flex-direction: column;
-  overflow-x: visible;
 
   p {
+    min-width: 0;
     color: #f9f9f9;
     font-size: 12px;
     margin: 0;
     padding: 5px;
     white-space: normal;
+    overflow-wrap: break-word;
   }
 }
 
-.outbox2 {
-  width: 80%;
-  height: 300px;
+///////////////////////////////////////////////////
+
+// Example 3 //////////////////////////////////////
+.outbox-3 {
+  width: 90%;
+  height: 400px;
   display: flex;
   overflow-y: auto; /* 滾動整個容器 */
-  background-color: #0f1044;
+  background-color: #8d2f23;
 }
 
-.inbox2 {
+.inbox-3-left {
   flex: 1 1 0;
   min-width: 0;
-  background-color: rgba(255, 238, 0, 0.432);
+  background-color: rgba(255, 238, 0, 0.5);
   margin: 10px;
 }
 
-.content-box {
-  width: auto;
-  height: auto;
-  overflow-x: scroll;
-  background-color: rgba(248, 186, 186, 0.527);
-}
-
-.content2 {
-  max-width: 100%;
-  display: flex;
-  flex-direction: column;
-  background-color: black;
+.inbox-3-right {
+  width: 100px;
+  flex-shrink: 0;
+  overflow-x: hidden; /* 水平溢出隱藏 */
+  background-color: rgba(255, 238, 0, 0.5);
   margin: 10px;
 }
 
-.content3 {
+.content-aside {
+  max-width: 100%;
+  background-color: #561e18;
+  box-sizing: border-box;
+  margin: 10px;
+  padding: 10px;
+}
+
+.content-middle {
   max-width: 100%;
   display: flex;
-  // flex-direction: column;
-  background-color: tomato;
+  background-color: #561e18;
   margin: 10px;
   overflow: scroll; /* 水平溢出隱藏 */
 
   p {
-    background-color: black;
+    min-width: 150px;
+    background-color: #212027;
     font-size: 12px;
     margin: 10px;
     padding: 5px;
@@ -219,16 +232,11 @@ function scrollDutVersion(direction) {
   }
 }
 
-.control-panel {
-  width: 100px;
-  flex-shrink: 0;
-  overflow-x: hidden; /* 水平溢出隱藏 */
-  background-color: rgba(255, 238, 0, 0.432);
-  margin: 10px;
-}
+///////////////////////////////////////////////////
 
+// Example 4 //////////////////////////////////////
 .dut-version-box {
-  width: 100%;
+  width: 90%;
   height: auto;
   display: flex;
   flex-direction: column;
@@ -250,7 +258,7 @@ function scrollDutVersion(direction) {
   display: flex;
   align-items: center;
   overflow-x: auto;
-  // scrollbar-width: none;
+  scrollbar-width: none;
 
   &-item {
     padding: 10px;
@@ -283,8 +291,8 @@ function scrollDutVersion(direction) {
   color: #fff;
   border: none;
   border-radius: 5px;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 60px;
   margin: 0 5px;
   font-size: 20px;
   cursor: pointer;

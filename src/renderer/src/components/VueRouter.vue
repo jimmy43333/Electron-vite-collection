@@ -1,17 +1,19 @@
 <template>
-  <div class="navigate-sidebar">
-    <div v-for="ele in items_list" :key="ele.router" class="navigate-item">
-      <RouterLink class="tip touch" :to="ele.router" @click="show_side_bar = false">{{
-        ele['name']
-      }}</RouterLink>
+  <div class="navigate-container">
+    <div class="navigate-sidebar">
+      <div v-for="ele in items_list" :key="ele.router" class="navigate-item">
+        <RouterLink class="tip touch" :to="ele.router" @click="show_side_bar = false">{{
+          ele['name']
+        }}</RouterLink>
+      </div>
     </div>
-  </div>
-  <div class="navigate-body">
-    <RouterView v-slot="{ Component }">
-      <keep-alive>
-        <component :is="Component" :key="$route.path" />
-      </keep-alive>
-    </RouterView>
+    <div class="navigate-body">
+      <RouterView v-slot="{ Component }">
+        <keep-alive>
+          <component :is="Component" :key="$route.path" />
+        </keep-alive>
+      </RouterView>
+    </div>
   </div>
 </template>
 
@@ -36,14 +38,18 @@ onMounted(() => {
 </script>
 
 <style lang="less">
-.navigate-sidebar {
-  min-width: 200px;
-  width: 10%;
+.navigate-container {
+  width: 100%;
   height: 100%;
-  position: fixed;
-  left: 0;
-  top: 0;
-  z-index: 10;
+  position: relative;
+  display: flex;
+  flex-direction: row;
+}
+
+.navigate-sidebar {
+  width: 200px;
+  height: 100vh;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   padding: 20px;
@@ -52,20 +58,19 @@ onMounted(() => {
   backdrop-filter: blur(1px);
 }
 
-.navigate-item {
-  height: 35px;
-  align-items: left;
-}
-
 .navigate-body {
-  position: fixed;
-  left: 200px;
-  top: 0;
-  width: 70%;
+  flex: 1;
   height: 90%;
   margin: 10px;
   padding: 10px;
+  overflow: auto;
+  box-sizing: border-box;
   box-shadow: inset 0 0 1px rgba(0, 0, 0);
+}
+
+.navigate-item {
+  height: 35px;
+  align-items: left;
 }
 
 a {
