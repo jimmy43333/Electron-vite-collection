@@ -6,6 +6,9 @@ import VirtualScroll from '../components/VueRouter/VirtualScroll.vue'
 import Table from '../components/VueRouter/Table.vue'
 import Terminal from '../components/Terminal.vue'
 import SaveJson from '../components/SaveJson.vue'
+import VueFlow from '../components/VueFlow.vue'
+import Websocket from '../components/Websocket.vue'
+import VueDraggable from '../components/VueDraggable.vue'
 
 const routes = [
   {
@@ -49,6 +52,21 @@ const routes = [
     path: '/saveJson',
     name: 'Electron Json Storage',
     component: SaveJson
+  },
+  {
+    path: '/vueFlow',
+    name: 'Vue Flow',
+    component: VueFlow
+  },
+  {
+    path: '/webSocket',
+    name: 'Websocket',
+    component: Websocket
+  },
+  {
+    path: '/vueDraggable',
+    name: 'Vue Draggable',
+    component: VueDraggable
   },
   {
     path: '/:p(.*)/index.html',

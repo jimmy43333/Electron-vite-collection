@@ -1,6 +1,7 @@
 <template>
   <div class="save-json-content">
     <h2>Electron Json Storage</h2>
+    <p>{{ message }}</p>
     <div>
       <button @click="loadData">Load</button>
       <button @click="saveData">Save</button>
@@ -48,6 +49,7 @@ import { onMounted, ref } from 'vue'
 
 const data = ref({})
 const check_box_option = ref({})
+const message = ref('Stored under: ~/.config/electron-vite-collection/storage')
 
 async function loadData() {
   try {
@@ -62,7 +64,7 @@ async function loadData() {
   } catch (error) {
     console.error('Error loading settings:', error)
   }
-  console.log(data.value)
+  // console.log(data.value)
 }
 
 async function saveData() {

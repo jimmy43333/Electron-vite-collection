@@ -7,6 +7,29 @@ import Logger from '../../resources/model/logger.js'
 import FileWatcher from '../../resources/model/fileWatcher.js'
 import * as jsonStorage from '../../resources/model/jsonStorage.js'
 
+function update_webcontent(data) {
+  let result = JSON.parse(data)
+  if (result.action === 'switch_channel') {
+    mainWindow.webContents.send('switch_channel', result.channel, result.message)
+  }
+  if (result.action === 'update_result') {
+    console.log(`Update result for channel ${result.channel}: ${result.message}`)
+    mainWindow.webContents.send('update_result', result.channel, result.message)
+  }
+}
+
+const webSocket = require('ws')
+const ws = new webSocket.Server({ port: 9999 })
+ws.on('connection', (socket) => {
+  console.log(`Client connected !!`)
+  socket.on('message', (data) => {
+    update_webcontent(data)
+  })
+  socket.on('close', () => {
+    console.log(`Client disconnect !!`)
+  })
+})
+
 const logger = new Logger().log.scope('main')
 let mainWindow
 
@@ -83,7 +106,9 @@ app.on('window-all-closed', () => {
 function IPChandlers() {
   // maximum
   ipcMain.on('maximum', () => {
+    console.log('Maximum')
     mainWindow.setFullScreen(true)
+    mainWindow.setResizable(true)
   })
 
   // ping

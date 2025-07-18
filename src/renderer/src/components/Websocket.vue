@@ -1,6 +1,6 @@
 <template>
   <div class="empty-content">
-    <h2>Nothing to see here</h2>
+    <h1>Nothing to see here</h1>
     <p>This is an empty component.</p>
   </div>
 </template>
