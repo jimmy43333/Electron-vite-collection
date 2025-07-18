@@ -34,7 +34,7 @@ defineProps({
 
 .circle-label {
   color: #030923;
-  font-size: 12px;
+  font-size: 20px;
   font-weight: bold;
   z-index: 1;
   pointer-events: none;

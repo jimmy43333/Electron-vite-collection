@@ -7,18 +7,26 @@
     <Handle id="top-left-S" type="source" :position="Position.Top" :style="{ left: '20%' }" />
     <Handle id="top-right-T" type="target" :position="Position.Top" :style="{ left: '80%' }" />
     <Handle id="top-right-S" type="source" :position="Position.Top" :style="{ left: '80%' }" />
+    <Handle id="top-middle-T" type="target" :position="Position.Top" />
+    <Handle id="top-middle-S" type="source" :position="Position.Top" />
     <Handle id="down-left-T" type="target" :position="Position.Bottom" :style="{ left: '20%' }" />
     <Handle id="down-left-S" type="source" :position="Position.Bottom" :style="{ left: '20%' }" />
     <Handle id="down-right-T" type="target" :position="Position.Bottom" :style="{ left: '80%' }" />
     <Handle id="down-right-S" type="source" :position="Position.Bottom" :style="{ left: '80%' }" />
+    <Handle id="down-middle-T" type="target" :position="Position.Bottom" />
+    <Handle id="down-middle-S" type="source" :position="Position.Bottom" />
     <Handle id="right-top-T" type="target" :position="Position.Right" :style="{ top: '20%' }" />
     <Handle id="right-top-S" type="source" :position="Position.Right" :style="{ top: '20%' }" />
     <Handle id="right-down-T" type="target" :position="Position.Right" :style="{ top: '80%' }" />
     <Handle id="right-down-S" type="source" :position="Position.Right" :style="{ top: '80%' }" />
+    <Handle id="right-middle-T" type="target" :position="Position.Right" />
+    <Handle id="right-middle-S" type="source" :position="Position.Right" />
     <Handle id="left-top-T" type="target" :position="Position.Left" :style="{ top: '20%' }" />
     <Handle id="left-top-S" type="source" :position="Position.Left" :style="{ top: '20%' }" />
     <Handle id="left-down-T" type="target" :position="Position.Left" :style="{ top: '80%' }" />
     <Handle id="left-down-S" type="source" :position="Position.Left" :style="{ top: '80%' }" />
+    <Handle id="left-middle-T" type="target" :position="Position.Left" />
+    <Handle id="left-middle-S" type="source" :position="Position.Left" />
   </div>
 </template>
 
@@ -30,16 +38,17 @@ const props = defineProps(['data'])
 <style scoped>
 .custom-node {
   background: azure;
-  border: 2px solid #2196f3;
-  border-radius: 8px;
+  border: 3px solid #2196f3;
+  border-radius: 5px;
   position: relative;
-  min-width: 150px;
+  min-width: 100px;
   text-align: center;
 }
 
 .custom-node-content {
   margin: 10px;
   color: black;
+  font-weight: 600;
 }
 
 /* Change handle appearance */

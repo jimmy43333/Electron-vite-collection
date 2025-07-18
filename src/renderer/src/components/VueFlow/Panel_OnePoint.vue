@@ -20,6 +20,11 @@ import CustomPointNode from './CustomPointNode.vue'
 const nodeTypes = {
   custom: markRaw(CustomPointNode)
 }
+
+defineExpose({
+  change
+})
+
 const nodes = ref([
   {
     id: 'center',
@@ -31,37 +36,37 @@ const nodes = ref([
     id: 'target1',
     type: 'custom',
     position: { x: 30, y: 10 },
-    data: { label: 'CH1' }
+    data: { label: '1' }
   },
   {
     id: 'target2',
     type: 'custom',
     position: { x: 115, y: 10 },
-    data: { label: 'CH2' }
+    data: { label: '2' }
   },
   {
     id: 'target3',
     type: 'custom',
     position: { x: 145, y: 73 },
-    data: { label: 'CH3' }
+    data: { label: '3' }
   },
   {
     id: 'target4',
     type: 'custom',
     position: { x: 115, y: 135 },
-    data: { label: 'CH4' }
+    data: { label: '4' }
   },
   {
     id: 'target5',
     type: 'custom',
     position: { x: 30, y: 135 },
-    data: { label: 'CH5' }
+    data: { label: '5' }
   },
   {
     id: 'target6',
     type: 'custom',
     position: { x: 0, y: 73 },
-    data: { label: 'CH6' }
+    data: { label: '6' }
   }
 ])
 
@@ -69,12 +74,25 @@ const edges = ref([
   {
     id: 'e1-2',
     source: 'center',
-    target: 'center',
+    target: 'target1',
     type: 'straight',
     animated: true,
     style: { stroke: 'yellow', strokeWidth: 6 }
   }
 ])
+
+function change() {
+  const current = edges.value[0].target
+  // change target to integer
+  let index = parseInt(current.replace('target', ''))
+  index = (index % 6) + 1 // cycle through 1 to 6
+  edges.value = [
+    {
+      ...edges.value[0],
+      target: `target${index}`
+    }
+  ]
+}
 
 window.electron.ipcRenderer.on('switch_channel', (event, channel, message) => {
   let index = channel.replace('CH', '')
@@ -89,7 +107,6 @@ window.electron.ipcRenderer.on('switch_channel', (event, channel, message) => {
 
 <style>
 @import '@vue-flow/core/dist/style.css';
-/* import the default theme, this is optional but generally recommended */
 @import '@vue-flow/core/dist/theme-default.css';
 .vue-flow-point-container {
   width: 100%;
