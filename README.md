@@ -10,6 +10,8 @@ An Electron application with Vue
 - Vue-router
 - Watch or Tail file data update to xterm.js terminal
 - Save data to electron-json-storage
+- Vue Flow
+- Vue Draggable
 
 ## 🛠️ Installation
 ```bash
@@ -41,4 +43,4 @@ $ npm run dev
 - [VSCode](https://code.visualstudio.com/)
 - [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
 - [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
-- [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar)
+- [Vue](https://marketplace.visualstudio.com/items?itemName=Vue.volar)
