@@ -23,49 +23,22 @@
       <div v-if="demo4.running" class="loader-3"></div>
     </div>
     <div v-if="demo4.result" class="python-result">{{ demo4.result }}</div>
-    <div v-if="stepInfo.total > 0" class="stepper-bar">
-      <div class="stepper-circles">
-        <template v-for="n in stepInfo.total" :key="n">
-          <div class="stepper-item">
-            <div
-              class="stepper-circle"
-              :class="{
-                active: n < stepInfo.current,
-                current: n === stepInfo.current
-              }"
-            >
-              <template v-if="n < stepInfo.current">
-                <span class="stepper-check">&#10003;</span>
-              </template>
-              <template v-else-if="n === stepInfo.current">
-                <span class="stepper-running">
-                  <span class="circle-loader"></span>
-                </span>
-              </template>
-              <template v-else>
-                {{ n }}
-              </template>
-            </div>
-            <div class="stepper-label-under">Step {{ n }}</div>
-          </div>
-          <div
-            v-if="n < stepInfo.total"
-            class="stepper-line"
-            :class="{ active: n < stepInfo.current }"
-          ></div>
-        </template>
-      </div>
+    <div style="width: 70%; height: 20px">
+      <ProgressBarStep :tags="tag_list" :current="stepInfo" :failed-steps="failedSteps" />
     </div>
   </div>
 </template>
 
 <script setup>
 import { onMounted, ref } from 'vue'
+import ProgressBarStep from './VueRouter/ProgressBarStep.vue'
 const demo1 = ref({ running: false, result: '' })
 const demo2 = ref({ running: false, result: '' })
 const demo3 = ref({ running: false, result: '' })
 const demo4 = ref({ running: false, result: '' })
-const stepInfo = ref({ current: 3, total: 4 })
+const tag_list = ['Power', 'Chiller', 'Relay', 'DUT', 'Chamber']
+const failedSteps = ref([])
+const stepInfo = ref(-1)
 
 function run_demo(script_name, flag) {
   const demo = flag === 1 ? demo1 : demo2
@@ -103,11 +76,47 @@ function run_demo3() {
 function run_demo_stream(script_name) {
   demo4.value.running = true
   demo4.value.result = ''
+  stepInfo.value = -1
+  failedSteps.value = []
   window.electron.ipcRenderer.send('run-python-stream', script_name)
 
   window.electron.ipcRenderer.on('python-progress', (event, data) => {
-    console.log('Python Progress Received data:', data)
-    demo4.value.result += `${data}\n` // Append new output
+    let result = ''
+    try {
+      result = JSON.parse(data)
+    } catch (error) {
+      console.error('Error parsing data:', error)
+      return
+    }
+    if (result && typeof result === 'object') {
+      console.log('Received progress data:', result)
+      if (result.device == 'Power') {
+        stepInfo.value = 1
+        if (result.status === false) {
+          failedSteps.value.push(0)
+        }
+      } else if (result.device == 'Chiller') {
+        stepInfo.value = 2
+        if (result.status === false) {
+          failedSteps.value.push(1)
+        }
+      } else if (result.device == 'Relay') {
+        stepInfo.value = 3
+        if (result.status === false) {
+          failedSteps.value.push(2)
+        }
+      } else if (result.device == 'DUT') {
+        stepInfo.value = 4
+        if (result.status === false) {
+          failedSteps.value.push(3)
+        }
+      } else if (result.device == 'Chamber') {
+        stepInfo.value = 5
+        if (result.status === false) {
+          failedSteps.value.push(4)
+        }
+      }
+    }
   })
 
   window.electron.ipcRenderer.once('python-done', (event, code) => {
@@ -222,106 +231,5 @@ button:disabled {
   100% {
     transform: rotate(1turn);
   }
-}
-
-.stepper-bar {
-  margin: 20px 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-.stepper-circles {
-  display: flex;
-  align-items: flex-end;
-}
-.stepper-item {
-  width: 60px;
-  height: 60px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  // background-color: #888;
-}
-.stepper-circle {
-  width: 25px;
-  height: 25px;
-  border-radius: 50%;
-  background: #e0e0e0;
-  color: #888;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 16px;
-  // border: 2px solid #b0b0b0;
-  transition:
-    background 0.2s,
-    color 0.2s,
-    border 0.2s;
-  overflow: hidden;
-}
-.stepper-circle.active {
-  background: #2590b0;
-  color: #fff;
-  border-color: #2590b0;
-}
-.stepper-circle.current {
-  box-shadow: 0 0 0 3px #2590b055;
-}
-.stepper-check {
-  color: #fff;
-  font-size: 15px;
-  font-weight: bold;
-}
-.stepper-running {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-}
-
-.circle-loader {
-  display: block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid #fff;
-  border-top: 2px solid #2590b0;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  padding: 3px;
-  margin: 0; // Remove any margin
-}
-
-@keyframes spin {
-  100% {
-    transform: rotate(360deg);
-  }
-}
-.stepper-label-under {
-  margin-top: 4px;
-  font-size: 16px;
-  font-weight: bold;
-  color: #2590b0;
-  text-align: center;
-  min-width: 40px;
-}
-
-.stepper-line {
-  width: 40px;
-  height: 6px;
-  background: #e0e0e0;
-  margin: 0 2px 40px 2px;
-  border-radius: 6px;
-  align-self: flex-end;
-}
-
-.stepper-line.active {
-  background: #2590b0;
-}
-
-.stepper-circle.active {
-  background: #2590b0;
 }
 </style>

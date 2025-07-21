@@ -15,10 +15,16 @@
       <span class="flow-progress-text">{{ flow_text }}</span>
     </div>
   </div>
+  <h2>Step Progress Bar</h2>
+  <button @click="step_move">Move</button>
+  <div class="step-bar">
+    <ProgressBarStep :tags="step_tags" :current="step_current" bg-color="yellowgreen" />
+  </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
+import ProgressBarStep from './ProgressBarStep.vue'
 const persent = ref(0)
 const flow_text = ref('Infromation text....')
 const flow_stop = ref(false)
@@ -36,6 +42,16 @@ const flow_action = ref([
   'Check_Pause 3',
   'Check_Resume 3'
 ])
+
+const step_tags = ref(['Step 1', 'Step 2', 'Step 3', 'Step 4', 'Step 5', 'Step 6', 'Step 7'])
+const step_current = ref(0)
+function step_move() {
+  if (step_current.value < step_tags.value.length - 1) {
+    step_current.value++
+  } else {
+    step_current.value = 0
+  }
+}
 
 function move(persentage) {
   var elem = document.getElementById('normal-progress-bar')
@@ -94,7 +110,11 @@ window.electron.ipcRenderer.on('update_flowing_progress', (event, arg) => {
 })
 </script>
 
-<style lang="less">
+<style lang="less" scoped>
+.step-bar {
+  width: auto;
+  overflow: auto;
+}
 /* ===========================
   Progress Bar Type Normal
 ============================== */
