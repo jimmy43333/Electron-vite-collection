@@ -9,6 +9,7 @@ import SaveJson from '../components/SaveJson.vue'
 import VueFlow from '../components/VueFlow.vue'
 import Websocket from '../components/Websocket.vue'
 import VueDraggable from '../components/VueDraggable.vue'
+import RunPython from '../components/RunPython.vue'
 
 const routes = [
   {
@@ -67,6 +68,11 @@ const routes = [
     path: '/vueDraggable',
     name: 'Vue Draggable',
     component: VueDraggable
+  },
+  {
+    path: '/runPython',
+    name: 'Run Python',
+    component: RunPython
   },
   {
     path: '/:p(.*)/index.html',

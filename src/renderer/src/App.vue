@@ -37,6 +37,9 @@
     <div class="action">
       <RouterLink to="/vueDraggable">Vue Draggable</RouterLink>
     </div>
+    <div class="action">
+      <RouterLink to="/runPython">Run Python</RouterLink>
+    </div>
   </div>
   <Versions />
   <div v-if="$route.path != '/'" class="router-viewer-container">

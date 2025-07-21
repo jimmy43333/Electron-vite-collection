@@ -6,6 +6,7 @@ import { myvariable } from '../../resources/data/my_variable.js'
 import Logger from '../../resources/model/logger.js'
 import FileWatcher from '../../resources/model/fileWatcher.js'
 import * as jsonStorage from '../../resources/model/jsonStorage.js'
+import { runPython, runPythonUpdating } from '../../resources/model/runPython.js'
 
 function update_webcontent(data) {
   let result = JSON.parse(data)
@@ -32,6 +33,8 @@ ws.on('connection', (socket) => {
 
 const logger = new Logger().log.scope('main')
 let mainWindow
+
+console.log(app.getPath('userData'))
 
 function createWindow() {
   // Create the browser window.
@@ -169,5 +172,28 @@ function IPChandlers() {
 
   ipcMain.on('remove_electron_json_storage', async (event, key) => {
     event.returnValue = await jsonStorage.removeElectronJsonStorage(key)
+  })
+
+  //Run python
+  ipcMain.handle('run-python', async (event, script_name) => {
+    try {
+      console.log(`Running Python script: ${script_name}`)
+      const scriptPath = join(__dirname, `../../resources/model/run_python/${script_name}`) // Adjust path as needed
+      const output = await runPython(scriptPath)
+      console.log(`Python script output: ${output}`)
+      return output
+    } catch (err) {
+      console.error('Python error:', err)
+      return `Error: ${err.message}` // Return error message to renderer
+    }
+  })
+
+  ipcMain.on('run-python-stream', (event, script_name) => {
+    try {
+      const scriptPath = join(__dirname, `../../resources/model/run_python/${script_name}`) // Adjust path as needed
+      runPythonUpdating(event, scriptPath)
+    } catch (err) {
+      console.error('Python error:', err)
+    }
   })
 }
