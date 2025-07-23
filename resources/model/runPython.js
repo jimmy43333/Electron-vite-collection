@@ -1,5 +1,6 @@
-const { spawn } = require('child_process')
-
+const { spawn, exec } = require('child_process')
+const util = require('util')
+const execAsync = util.promisify(exec)
 /**
  * Executes a Python script.
  * @param {string} scriptPath - Path to the Python script.
@@ -51,4 +52,25 @@ export function runPythonUpdating(event, scriptPath, args = []) {
       throw new Error(`Python process exited with code ${code}`)
     }
   })
+}
+
+export async function runCommand(script_command, args = [], container = false) {
+  try {
+    let execute = ''
+    if (container) {
+      execute = `docker exec -i ${container} sh -c '${script_command} ${args.join(' ')}'`
+      console.log(execute)
+    } else {
+      execute = `${script_command} ${args.join(' ')}`
+    }
+    const { stdout, stderr } = await execAsync(execute)
+    if (stderr) {
+      console.error('STDERROR:', stderr.trim())
+      throw new Error(stderr.trim())
+    }
+    return stdout.trim()
+  } catch (error) {
+    console.log(error.code)
+    console.log(error.stderr)
+  }
 }

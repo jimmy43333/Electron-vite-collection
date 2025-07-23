@@ -26,6 +26,9 @@
     <div style="width: 70%; height: 20px">
       <ProgressBarStep :tags="tag_list" :current="stepInfo" :failed-steps="failedSteps" />
     </div>
+    <h2>Execute Async Command</h2>
+    <button @click="run_command">Run</button>
+    <button @click="run_command_in_docker">Run in Docker</button>
   </div>
 </template>
 
@@ -123,6 +126,30 @@ function run_demo_stream(script_name) {
     demo4.value.running = false
     console.log(`\nProcess exited with code ${code}`)
   })
+}
+
+function run_command() {
+  window.electron.ipcRenderer
+    .invoke('run-async-command', 'python3', [
+      '~/Desktop/Electron-vite-collection/resources/model/run_python/demo.py'
+    ])
+    .then((result) => {
+      console.log('Async command executed successfully:', result)
+    })
+    .catch((error) => {
+      console.error('Error executing async command:', error)
+    })
+}
+
+function run_command_in_docker() {
+  window.electron.ipcRenderer
+    .invoke('run-async-command-in-docker', 'bash', ['entry.sh'], 'utility_ros2_1')
+    .then((result) => {
+      console.log('Async command executed successfully:', result)
+    })
+    .catch((error) => {
+      console.error('Error executing async command:', error)
+    })
 }
 
 onMounted(() => {
