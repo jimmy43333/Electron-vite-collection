@@ -6,7 +6,12 @@ import { myvariable } from '../../resources/data/my_variable.js'
 import Logger from '../../resources/model/logger.js'
 import FileWatcher from '../../resources/model/fileWatcher.js'
 import * as jsonStorage from '../../resources/model/jsonStorage.js'
-import { runPython, runPythonUpdating, runCommand } from '../../resources/model/runPython.js'
+import {
+  runPython,
+  runPythonUpdating,
+  runCommand,
+  runCommandSync
+} from '../../resources/model/runPython.js'
 
 function update_webcontent(data) {
   let result = JSON.parse(data)
@@ -213,6 +218,18 @@ function IPChandlers() {
     try {
       console.log(`Running command in docker: ${script_command} ${args.join(' ')}`)
       const output = await runCommand(script_command, args, container)
+      console.log(`Command output: ${output}`)
+      return output
+    } catch (err) {
+      console.error('Command error:', err)
+      return `Error: ${err.message}` // Return error message to renderer
+    }
+  })
+
+  ipcMain.handle('run-sync-command', (event, script_command, args) => {
+    try {
+      console.log(`Running command: ${script_command} ${args.join(' ')}`)
+      const output = runCommandSync(script_command, args)
       console.log(`Command output: ${output}`)
       return output
     } catch (err) {

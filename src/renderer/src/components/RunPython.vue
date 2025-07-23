@@ -23,12 +23,14 @@
       <div v-if="demo4.running" class="loader-3"></div>
     </div>
     <div v-if="demo4.result" class="python-result">{{ demo4.result }}</div>
-    <div style="width: 70%; height: 20px">
+    <div style="width: 70%; height: 80px">
       <ProgressBarStep :tags="tag_list" :current="stepInfo" :failed-steps="failedSteps" />
     </div>
     <h2>Execute Async Command</h2>
-    <button @click="run_command">Run</button>
+    <button @click="run_async_command">Run</button>
     <button @click="run_command_in_docker">Run in Docker</button>
+    <h2>Execute Sync Command</h2>
+    <button @click="run_sync_command">Run</button>
   </div>
 </template>
 
@@ -128,7 +130,7 @@ function run_demo_stream(script_name) {
   })
 }
 
-function run_command() {
+function run_async_command() {
   window.electron.ipcRenderer
     .invoke('run-async-command', 'python3', [
       '~/Desktop/Electron-vite-collection/resources/model/run_python/demo.py'
@@ -149,6 +151,19 @@ function run_command_in_docker() {
     })
     .catch((error) => {
       console.error('Error executing async command:', error)
+    })
+}
+
+function run_sync_command() {
+  window.electron.ipcRenderer
+    .invoke('run-sync-command', 'python3', [
+      '~/Desktop/Electron-vite-collection/resources/model/run_python/demo.py'
+    ])
+    .then((result) => {
+      console.log('Sync command executed successfully:', result)
+    })
+    .catch((error) => {
+      console.error('Error executing sync command:', error)
     })
 }
 

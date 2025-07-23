@@ -1,4 +1,4 @@
-const { spawn, exec } = require('child_process')
+const { spawn, spawnSync, exec } = require('child_process')
 const util = require('util')
 const execAsync = util.promisify(exec)
 /**
@@ -69,6 +69,21 @@ export async function runCommand(script_command, args = [], container = false) {
       throw new Error(stderr.trim())
     }
     return stdout.trim()
+  } catch (error) {
+    console.log(error.code)
+    console.log(error.stderr)
+  }
+}
+
+export function runCommandSync(script_command, args = []) {
+  try {
+    let execute = `${script_command} ${args.join(' ')}`
+    const { stdout, stderr } = spawnSync(execute, { shell: true })
+    if (stderr && stderr.length > 0) {
+      console.error('STDERROR:', stderr.toString().trim())
+      throw new Error(stderr.toString().trim())
+    }
+    return stdout.toString().trim()
   } catch (error) {
     console.log(error.code)
     console.log(error.stderr)
