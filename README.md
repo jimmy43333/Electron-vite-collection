@@ -31,6 +31,7 @@ $ npm install electron-json-storage
 $ npm install @vue-flow/core
 $ npm install ws
 $ npm install vuedraggable@next
+$ npm install toastify-js
 ```
 
 ## Development

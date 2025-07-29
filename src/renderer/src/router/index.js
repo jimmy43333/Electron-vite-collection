@@ -10,6 +10,7 @@ import VueFlow from '../components/VueFlow.vue'
 import Websocket from '../components/Websocket.vue'
 import VueDraggable from '../components/VueDraggable.vue'
 import RunPython from '../components/RunPython.vue'
+import ToastifyBlock from '../components/VueRouter/ToastifyBlock.vue'
 
 const routes = [
   {
@@ -41,6 +42,11 @@ const routes = [
         path: 'table',
         name: 'Table',
         component: Table
+      },
+      {
+        path: 'toastify',
+        name: 'Toastify',
+        component: ToastifyBlock
       }
     ]
   },
