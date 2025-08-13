@@ -2,6 +2,8 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+const fs = require('fs')
+const webSocket = require('ws')
 import { myvariable } from '../../resources/data/my_variable.js'
 import Logger from '../../resources/model/logger.js'
 import FileWatcher from '../../resources/model/fileWatcher.js'
@@ -24,7 +26,6 @@ function update_webcontent(data) {
   }
 }
 
-const webSocket = require('ws')
 const ws = new webSocket.Server({ port: 9999 })
 ws.on('connection', (socket) => {
   console.log(`Client connected !!`)
@@ -38,8 +39,6 @@ ws.on('connection', (socket) => {
 
 const logger = new Logger().log.scope('main')
 let mainWindow
-
-console.log(app.getPath('userData'))
 
 function createWindow() {
   // Create the browser window.
@@ -236,5 +235,63 @@ function IPChandlers() {
       console.error('Command error:', err)
       return `Error: ${err.message}` // Return error message to renderer
     }
+  })
+
+  // 只更新 A 有的 key，B 的值覆蓋 A
+  function updateAWithB(a, b) {
+    for (const key in a) {
+      if (Object.prototype.hasOwnProperty.call(b, key)) {
+        // 如果是物件，遞迴處理
+        if (
+          typeof a[key] === 'object' &&
+          a[key] !== null &&
+          typeof b[key] === 'object' &&
+          b[key] !== null
+        ) {
+          updateAWithB(a[key], b[key])
+        } else {
+          a[key] = b[key]
+        }
+      }
+    }
+    return a
+  }
+
+  ipcMain.handle('getExternalConfig', async (event) => {
+    let base_data = null
+    let output_data = null
+    const basePath = app.isPackaged ? app.getAppPath() : process.cwd()
+    const projectDefault = `${myvariable.log_folder}/data/config.json`
+    // Check if the default config file exists
+    if (fs.existsSync(projectDefault)) {
+      try {
+        console.log('Reading external project base config from:', projectDefault)
+        base_data = JSON.parse(fs.readFileSync(projectDefault, 'utf-8'))
+      } catch (error) {
+        console.error(`Error reading external config file:`, error)
+      }
+    } else {
+      try {
+        console.log(`Reading default base config from: ${configPath}`)
+        const configPath = join(basePath, 'resources', 'data', 'config.json')
+        base_data = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+      } catch (error) {
+        console.error(`Error reading default config file:`, error)
+      }
+    }
+    const exists = await jsonStorage.hasElectronJsonStorage('external-config')
+    if (exists && base_data) {
+      console.log('Reading external config from electron-json-storage')
+      output_data = await jsonStorage.getElectronJsonStorage('external-config')
+      output_data = updateAWithB(base_data, output_data)
+      return output_data
+    } else if (base_data) {
+      return base_data
+    }
+  })
+
+  ipcMain.handle('saveExternalConfig', async (event, updatedConfig) => {
+    // let dataToSave = JSON.parse(updatedConfig)
+    event.returnValue = await jsonStorage.setElectronJsonStorage('external-config', updatedConfig)
   })
 }

@@ -32,6 +32,7 @@ $ npm install @vue-flow/core
 $ npm install ws
 $ npm install vuedraggable@next
 $ npm install toastify-js
+$ npm install jsoneditor
 ```
 
 ## Development

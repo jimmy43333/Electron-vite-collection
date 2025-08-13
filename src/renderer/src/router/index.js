@@ -11,6 +11,7 @@ import Websocket from '../components/Websocket.vue'
 import VueDraggable from '../components/VueDraggable.vue'
 import RunPython from '../components/RunPython.vue'
 import ToastifyBlock from '../components/VueRouter/ToastifyBlock.vue'
+import ExternalConfig from '../components/ExternalConfig.vue'
 
 const routes = [
   {
@@ -79,6 +80,11 @@ const routes = [
     path: '/runPython',
     name: 'Run Python',
     component: RunPython
+  },
+  {
+    path: '/externalConfig',
+    name: 'External Config',
+    component: ExternalConfig
   },
   {
     path: '/:p(.*)/index.html',

@@ -1,0 +1,44 @@
+{
+  "Config": {
+    "Node.String": {
+      "web": "String",
+      "describe": "This is a string in the config file",
+      "tag": "user",
+      "types": "text",
+      "options": [],
+      "handle": "",
+      "default": "Default String Value",
+      "value": "BBBB"
+    },
+    "Node.Number": {
+      "web": "String",
+      "describe": "This is a number in the config file",
+      "tag": "env",
+      "types": "dropbox",
+      "options": [1, 2, 3, 4, 5],
+      "handle": "",
+      "default": 1,
+      "value": 2
+    },
+    "All.Boolean": {
+      "web": "String",
+      "describe": "This is a boolean in the config file",
+      "tag": "profile",
+      "types": "text",
+      "options": [],
+      "handle": "",
+      "default": true,
+      "value": false
+    },
+    "M1.Array": {
+      "web": "String",
+      "describe": "This is a array in the config file",
+      "tag": "user",
+      "types": "text",
+      "options": [],
+      "handle": "",
+      "default": ["item1", "item2"],
+      "value": ["item1", "item2"]
+    }
+  }
+}

@@ -1,5 +1,17 @@
 import storage from 'electron-json-storage'
 
+export async function hasElectronJsonStorage(key) {
+  return new Promise((resolve, reject) => {
+    storage.has(key, (error, hasKey) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve(hasKey)
+      }
+    })
+  })
+}
+
 export async function getElectronJsonStorage(key) {
   return new Promise((resolve, reject) => {
     const p = storage.getDataPath()

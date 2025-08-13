@@ -26,6 +26,7 @@
     "chokidar": "^4.0.3",
     "electron-json-storage": "^4.6.0",
     "electron-log": "^5.4.1",
+    "jsoneditor": "^10.3.0",
     "less": "^4.3.0",
     "tail": "^2.2.6",
     "toastify-js": "^1.12.0",
