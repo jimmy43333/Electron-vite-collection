@@ -31,6 +31,8 @@
     <button @click="run_command_in_docker">Run in Docker</button>
     <h2>Execute Sync Command</h2>
     <button @click="run_sync_command">Run</button>
+    <h2>Run Production Python Exe</h2>
+    <button @click="run_python_exe('production_demo')">Run Python Exe</button>
   </div>
 </template>
 
@@ -164,6 +166,17 @@ function run_sync_command() {
     })
     .catch((error) => {
       console.error('Error executing sync command:', error)
+    })
+}
+
+function run_python_exe(script) {
+  window.electron.ipcRenderer
+    .invoke('run-python-exe', script)
+    .then((result) => {
+      console.log('Exe executed successfully:', result)
+    })
+    .catch((error) => {
+      console.error('Error executing exe:', error)
     })
 }
 

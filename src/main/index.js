@@ -8,12 +8,18 @@ import { myvariable } from '../../resources/data/my_variable.js'
 import Logger from '../../resources/model/logger.js'
 import FileWatcher from '../../resources/model/fileWatcher.js'
 import * as jsonStorage from '../../resources/model/jsonStorage.js'
-import {
-  runPython,
-  runPythonUpdating,
-  runCommand,
-  runCommandSync
-} from '../../resources/model/runPython.js'
+import registerRunPythonHandler from '../../resources/model/runPython.js'
+
+// Add global error handling for unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason)
+  // Application specific logging, throwing an error, or other logic here
+})
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error)
+  // Application specific logging, throwing an error, or other logic here
+})
 
 function update_webcontent(data) {
   let result = JSON.parse(data)
@@ -91,6 +97,7 @@ app.whenReady().then(() => {
   // IPC test
   createWindow()
   IPChandlers()
+  registerRunPythonHandler()
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
@@ -176,65 +183,6 @@ function IPChandlers() {
 
   ipcMain.on('remove_electron_json_storage', async (event, key) => {
     event.returnValue = await jsonStorage.removeElectronJsonStorage(key)
-  })
-
-  //Run python
-  ipcMain.handle('run-python', async (event, script_name) => {
-    try {
-      console.log(`Running Python script: ${script_name}`)
-      const scriptPath = join(__dirname, `../../resources/model/run_python/${script_name}`) // Adjust path as needed
-      const output = await runPython(scriptPath)
-      console.log(`Python script output: ${output}`)
-      return output
-    } catch (err) {
-      console.error('Python error:', err)
-      return `Error: ${err.message}` // Return error message to renderer
-    }
-  })
-
-  ipcMain.on('run-python-stream', (event, script_name) => {
-    try {
-      const scriptPath = join(__dirname, `../../resources/model/run_python/${script_name}`) // Adjust path as needed
-      runPythonUpdating(event, scriptPath)
-    } catch (err) {
-      console.error('Python error:', err)
-    }
-  })
-
-  ipcMain.handle('run-async-command', async (event, script_command, args) => {
-    try {
-      console.log(`Running command: ${script_command} ${args.join(' ')}`)
-      const output = await runCommand(script_command, args)
-      console.log(`Command output: ${output}`)
-      return output
-    } catch (err) {
-      console.error('Command error:', err)
-      return `Error: ${err.message}` // Return error message to renderer
-    }
-  })
-
-  ipcMain.handle('run-async-command-in-docker', async (event, script_command, args, container) => {
-    try {
-      console.log(`Running command in docker: ${script_command} ${args.join(' ')}`)
-      const output = await runCommand(script_command, args, container)
-      console.log(`Command output: ${output}`)
-      return output
-    } catch (err) {
-      console.error('Command error:', err)
-      return `Error: ${err.message}` // Return error message to renderer
-    }
-  })
-
-  ipcMain.handle('run-sync-command', (event, script_command, args) => {
-    try {
-      console.log(`Running command: ${script_command} ${args.join(' ')}`)
-      const output = runCommandSync(script_command, args)
-      console.log(`Command output: ${output}`)
-      return output
-    } catch (err) {
-      console.error('Command error:', err)
-      return `Error: ${err.message}` // Return error message to renderer
-    }
   })
 
   // 只更新 A 有的 key，B 的值覆蓋 A
