@@ -208,16 +208,25 @@ export default function registerRunPythonHandler() {
     }
   })
 
-  ipcMain.handle('run-python-exe', (event, script) => {
+  ipcMain.handle('run-python-exe', (event, script_name) => {
     return new Promise((resolve, reject) => {
       try {
-        const deployPath = path.join(getPythonScriptPath(), script)
-        console.log('Attempting to run executable at:', deployPath)
+        let base_path = getPythonScriptPath()
+        let scriptPath = ''
+        console.log('Base Python script path:', process.platform)
+        if (process.platform === 'win32') {
+          scriptPath = path.join(base_path, 'win', script_name)
+        } else if (process.platform === 'darwin') {
+          scriptPath = path.join(base_path, 'mac', script_name)
+        } else {
+          scriptPath = path.join(base_path, 'linux', script_name)
+        }
+        console.log('Run executable at:', scriptPath)
 
         // Check if file exists and set executable permissions if needed
         const fs = require('fs')
-        if (!fs.existsSync(deployPath)) {
-          const error = new Error(`Executable not found: ${deployPath}`)
+        if (!fs.existsSync(scriptPath)) {
+          const error = new Error(`Executable not found: ${scriptPath}`)
           console.error('File not found error:', error)
           reject(error)
           return
@@ -225,12 +234,12 @@ export default function registerRunPythonHandler() {
 
         // Set executable permissions (Unix-like systems)
         try {
-          fs.chmodSync(deployPath, '755')
+          fs.chmodSync(scriptPath, '755')
         } catch (chmodError) {
           console.warn('Could not set executable permissions:', chmodError.message)
         }
 
-        const child = spawn(deployPath, {
+        const child = spawn(scriptPath, {
           stdio: ['ignore', 'pipe', 'pipe']
         })
 
