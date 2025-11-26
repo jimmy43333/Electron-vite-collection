@@ -2,13 +2,16 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-const fs = require('fs')
-const webSocket = require('ws')
+import fs from 'fs'
 import { myvariable } from '../../resources/data/my_variable.js'
 import Logger from '../../resources/model/logger.js'
 import FileWatcher from '../../resources/model/fileWatcher.js'
 import * as jsonStorage from '../../resources/model/jsonStorage.js'
 import registerRunPythonHandler from '../../resources/model/runPython.js'
+
+import WebSocketManager from './websocketManager.js'
+import DataStoreManager from './dataStoreManager.js'
+import IPCHandlers from './ipcHandlers.js'
 
 // Add global error handling for unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
@@ -21,30 +24,20 @@ process.on('uncaughtException', (error) => {
   // Application specific logging, throwing an error, or other logic here
 })
 
-function update_webcontent(data) {
-  let result = JSON.parse(data)
-  if (result.action === 'switch_channel') {
-    mainWindow.webContents.send('switch_channel', result.channel, result.message)
-  }
-  if (result.action === 'update_result') {
-    console.log(`Update result for channel ${result.channel}: ${result.message}`)
-    mainWindow.webContents.send('update_result', result.channel, result.message)
-  }
-}
-
-const ws = new webSocket.Server({ port: 9999 })
-ws.on('connection', (socket) => {
-  console.log(`Client connected !!`)
-  socket.on('message', (data) => {
-    update_webcontent(data)
-  })
-  socket.on('close', () => {
-    console.log(`Client disconnect !!`)
-  })
-})
-
 const logger = new Logger().log.scope('main')
 let mainWindow
+let wsManager
+let dataStore
+let ipcHandlers
+
+// WebSocket 配置
+const WS_CONFIG = [
+  { url: 'ws://localhost:8765', dataKey: 'data1' },
+  { url: 'ws://localhost:8765', dataKey: 'data2' },
+  { url: 'ws://localhost:8765', dataKey: 'data3' }
+]
+
+const DATA_KEYS = ['data1', 'data2', 'data3']
 
 function createWindow() {
   // Create the browser window.
@@ -80,6 +73,146 @@ function createWindow() {
   }
 }
 
+/**
+ * 初始化數據存儲
+ */
+function initDataStore() {
+  console.log('Initializing data store...')
+  dataStore = new DataStoreManager(DATA_KEYS)
+
+  // 監聽數據更新事件
+  dataStore.on('data-updated', ({ dataKey, type, count, results }) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(`${dataKey}-update`, {
+        type,
+        count: count || results?.updated + results?.inserted,
+        results,
+        timestamp: new Date().toISOString()
+      })
+    }
+  })
+
+  dataStore.on('batch-progress', (progress) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('batch-progress', progress)
+    }
+  })
+
+  console.log('✓ Data store initialized')
+  return dataStore
+}
+
+/**
+ * 初始化 WebSocket 管理器
+ */
+function initWebSocketManager() {
+  console.log('Initializing WebSocket manager...')
+
+  wsManager = new WebSocketManager({
+    reconnectInterval: 5000,
+    maxReconnectAttempts: 10,
+    pingInterval: 30000
+  })
+
+  // 監聽連接事件
+  wsManager.on('connected', ({ dataKey }) => {
+    console.log(`✓ ${dataKey} connected`)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('ws-status', { dataKey, status: 'connected' })
+    }
+  })
+
+  // 監聽消息事件
+  wsManager.on('message', ({ dataKey, data }) => {
+    handleWebSocketMessage(dataKey, data)
+  })
+
+  // 監聽錯誤事件
+  wsManager.on('error', ({ dataKey, error }) => {
+    console.error(`WebSocket ${dataKey} error:`, error)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('ws-error', { dataKey, error })
+    }
+  })
+
+  // 監聽關閉事件
+  wsManager.on('closed', ({ dataKey }) => {
+    console.log(`${dataKey} disconnected`)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('ws-status', { dataKey, status: 'disconnected' })
+    }
+  })
+
+  // 監聽重連失敗事件
+  wsManager.on('reconnect-failed', ({ dataKey }) => {
+    console.error(`${dataKey} reconnect failed`)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('ws-reconnect-failed', { dataKey })
+    }
+  })
+
+  // 初始化所有連接
+  wsManager.initConnections(WS_CONFIG)
+
+  console.log('✓ WebSocket manager initialized')
+  return wsManager
+}
+
+/**
+ * 處理 WebSocket 消息
+ */
+function handleWebSocketMessage(dataKey, data) {
+  try {
+    if (data.type === 'full') {
+      // 完整數據替換
+      dataStore.setData(dataKey, data.data)
+      console.log(`Full data update for ${dataKey}: ${data.data?.length} items`)
+    } else if (data.type === 'update' || data.type === 'incremental') {
+      // 增量更新
+      const results = dataStore.handleUpdate(dataKey, data.updates || data.data)
+      console.log(`Incremental update for ${dataKey}:`, results)
+    } else if (data.type === 'batch') {
+      // 批量更新
+      dataStore.batchUpdate(dataKey, data.updates || data.data)
+    } else {
+      console.warn(`Unknown message type for ${dataKey}:`, data.type)
+    }
+  } catch (error) {
+    console.error(`Error handling WebSocket message for ${dataKey}:`, error)
+  }
+}
+
+/**
+ * 初始化 IPC 處理器
+ */
+function initIPCHandlers() {
+  console.log('Initializing IPC handlers...')
+  ipcHandlers = new IPCHandlers(dataStore, wsManager)
+  ipcHandlers.registerAll()
+  return ipcHandlers
+}
+
+/**
+ * 清理資源
+ */
+function cleanup() {
+  console.log('Cleaning up resources...')
+
+  if (wsManager) {
+    wsManager.closeAll()
+  }
+
+  if (ipcHandlers) {
+    ipcHandlers.unregisterAll()
+  }
+
+  if (dataStore) {
+    dataStore.removeAllListeners()
+  }
+
+  console.log('✓ Cleanup complete')
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -93,6 +226,11 @@ app.whenReady().then(() => {
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
+
+  // 初始化各個模組
+  initDataStore()
+  initWebSocketManager()
+  initIPCHandlers()
 
   // IPC test
   createWindow()
@@ -110,9 +248,15 @@ app.whenReady().then(() => {
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
+  cleanup()
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+// 應用退出前清理
+app.on('before-quit', () => {
+  cleanup()
 })
 
 // In this file you can include the rest of your app"s specific main process
@@ -205,7 +349,7 @@ function IPChandlers() {
     return a
   }
 
-  ipcMain.handle('getExternalConfig', async (event) => {
+  ipcMain.handle('getExternalConfig', async () => {
     let base_data = null
     let output_data = null
     const basePath = app.isPackaged ? app.getAppPath() : process.cwd()
@@ -240,6 +384,6 @@ function IPChandlers() {
 
   ipcMain.handle('saveExternalConfig', async (event, updatedConfig) => {
     // let dataToSave = JSON.parse(updatedConfig)
-    event.returnValue = await jsonStorage.setElectronJsonStorage('external-config', updatedConfig)
+    return await jsonStorage.setElectronJsonStorage('external-config', updatedConfig)
   })
 }
