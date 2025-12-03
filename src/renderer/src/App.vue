@@ -32,9 +32,6 @@
       <RouterLink to="/vueFlow">Vue Flow</RouterLink>
     </div>
     <div class="action">
-      <RouterLink to="/webSocket">Websocket</RouterLink>
-    </div>
-    <div class="action">
       <RouterLink to="/vueDraggable">Vue Draggable</RouterLink>
     </div>
     <div class="action">
@@ -42,6 +39,9 @@
     </div>
     <div class="action">
       <RouterLink to="/externalConfig">External Config</RouterLink>
+    </div>
+    <div class="action">
+      <RouterLink to="/showWebsocketData">Websocket Data</RouterLink>
     </div>
   </div>
   <Versions />

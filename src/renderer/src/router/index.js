@@ -7,11 +7,11 @@ import Table from '../components/VueRouter/Table.vue'
 import Terminal from '../components/Terminal.vue'
 import SaveJson from '../components/SaveJson.vue'
 import VueFlow from '../components/VueFlow.vue'
-import Websocket from '../components/Websocket.vue'
 import VueDraggable from '../components/VueDraggable.vue'
 import RunPython from '../components/RunPython.vue'
 import ToastifyBlock from '../components/VueRouter/ToastifyBlock.vue'
 import ExternalConfig from '../components/ExternalConfig.vue'
+import ShowWebsocketData from '../components/ShowWebsocketData.vue'
 
 const routes = [
   {
@@ -67,11 +67,6 @@ const routes = [
     component: VueFlow
   },
   {
-    path: '/webSocket',
-    name: 'Websocket',
-    component: Websocket
-  },
-  {
     path: '/vueDraggable',
     name: 'Vue Draggable',
     component: VueDraggable
@@ -85,6 +80,11 @@ const routes = [
     path: '/externalConfig',
     name: 'External Config',
     component: ExternalConfig
+  },
+  {
+    path: '/showWebsocketData',
+    name: 'show Websocket Data',
+    component: ShowWebsocketData
   },
   {
     path: '/:p(.*)/index.html',
