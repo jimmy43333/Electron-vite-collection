@@ -9,6 +9,7 @@ export class WebSocketClient {
     this.connection = null
     this.reconnectAttempts = 0
     this.pingIntervalId = null // ping 定時器 ID
+    this.reconnectTimeoutId = null // 重連定時器 ID
 
     this.dataManager = DataManager
   }
@@ -25,6 +26,12 @@ export class WebSocketClient {
     if (this.connection) {
       console.log(`Connection ${this.clientKey} already exists`)
       return
+    }
+
+    if (!url) {
+      url = this.url
+    } else {
+      this.url = url
     }
 
     const ws = new WebSocket(url)
@@ -61,6 +68,8 @@ export class WebSocketClient {
    * 關閉連接
    */
   disconnect() {
+    this.reconnectAttempts = Infinity
+    this.clearReconnectTimeout() // 清除重連定時器
     if (this.connection) {
       this.clearPing()
       this.connection.close()
@@ -154,7 +163,8 @@ export class WebSocketClient {
       `Reconnecting ${this.clientKey} in ${delay}ms (attempt ${this.reconnectAttempts})...`
     )
 
-    setTimeout(() => {
+    this.reconnectTimeoutId = setTimeout(() => {
+      this.reconnectTimeoutId = null
       this.connect()
     }, delay)
   }
@@ -167,6 +177,17 @@ export class WebSocketClient {
     if (this.pingIntervalId) {
       clearInterval(this.pingIntervalId)
       this.pingIntervalId = null
+    }
+  }
+
+  /**
+   * 清除重連定時器
+   * @private
+   */
+  clearReconnectTimeout() {
+    if (this.reconnectTimeoutId) {
+      clearTimeout(this.reconnectTimeoutId)
+      this.reconnectTimeoutId = null
     }
   }
 

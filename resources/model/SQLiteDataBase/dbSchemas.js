@@ -16,6 +16,10 @@ export const META_DB_SCHEMA = {
         type: 'TEXT',
         notNull: true
       },
+      workspace: {
+        type: 'TEXT',
+        notNull: true
+      },
       description: {
         type: 'TEXT',
         default: "''"
@@ -25,17 +29,11 @@ export const META_DB_SCHEMA = {
         notNull: true,
         default: "'created'"
       },
-      result: {
+      testStartTime: {
         type: 'TEXT'
       },
-      startTime: {
+      testEndTime: {
         type: 'TEXT'
-      },
-      endTime: {
-        type: 'TEXT'
-      },
-      duration: {
-        type: 'INTEGER'
       },
       recordCount: {
         type: 'INTEGER',
@@ -48,13 +46,7 @@ export const META_DB_SCHEMA = {
       rotationPolicy: {
         type: 'TEXT'
       },
-      config: {
-        type: 'TEXT'
-      },
-      tags: {
-        type: 'TEXT'
-      },
-      metadata: {
+      dbPath: {
         type: 'TEXT'
       },
       createdAt: {

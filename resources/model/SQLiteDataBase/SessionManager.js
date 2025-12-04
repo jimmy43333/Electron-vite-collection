@@ -60,6 +60,7 @@ export class SessionManager extends EventEmitter {
   async initializeMetaDatabase() {
     try {
       await this.meta_db.createTables(META_DB_SCHEMA)
+      await this.meta_db.printTableSchema('sessions')
       console.log(`✅ Meta 資料庫初始化完成`)
     } catch (error) {
       console.error(`❌ Meta 資料庫初始化失敗:`, error)
@@ -113,16 +114,18 @@ export class SessionManager extends EventEmitter {
       this.currentSessionDb = session_db
 
       // 在 Meta 資料庫中記錄會話資訊
+      const currentTime = new Date().toISOString()
       await this.meta_db.insert('sessions', {
         sessionId: session_id,
         testName: `Test Session ${session_id}`,
         description: '',
         status: SESSION_STATUS.CREATED,
-        startTime: new Date().toISOString(),
+        testStartTime: currentTime,
         dbPath: sessionDbPath,
-        workspace: this.workspace_key
+        workspace: this.workspace_key,
+        createdAt: currentTime,
+        updatedAt: currentTime
       })
-
       // 在會話資料庫中也存一份基本 meta 資料
       await this.updateMetaData({
         sessionId: session_id,
@@ -150,6 +153,7 @@ export class SessionManager extends EventEmitter {
       if (!this.hasActiveSession()) {
         throw new Error(`沒有活躍會話，無法更新會話資料`)
       }
+      console.log(data)
 
       const session_db = this.currentSessionDb
       const session_id = this.currentSessionId
@@ -165,7 +169,7 @@ export class SessionManager extends EventEmitter {
       }
 
       // 插入到輪轉表中（會自動處理輪轉）
-      const result = await session_db.insert('websocket_data', websocketData)
+      const result = await session_db.insert('websocketData', websocketData)
 
       console.log(`📝 WebSocket 資料已更新: ${session_id} -> ${result.tableName}`)
       this.emit('websocketDataUpdated', {
@@ -202,7 +206,8 @@ export class SessionManager extends EventEmitter {
         if (data.description !== undefined) metaUpdates.description = data.description
         if (data.status !== undefined) metaUpdates.status = data.status
         if (data.result !== undefined) metaUpdates.result = data.result
-        if (data.endTime !== undefined) metaUpdates.endTime = data.endTime
+        if (data.endTime !== undefined) metaUpdates.testEndTime = data.endTime
+        if (data.testEndTime !== undefined) metaUpdates.testEndTime = data.testEndTime
         if (data.summary !== undefined) metaUpdates.summary = JSON.stringify(data.summary)
 
         metaUpdates.updatedAt = updateTime
@@ -301,7 +306,7 @@ export class SessionManager extends EventEmitter {
   /**
    * 關閉當前活躍會話
    */
-  closeSession() {
+  closeTestSession() {
     if (this.currentSessionDb) {
       this.currentSessionDb.close()
       console.log(`🔒 會話資料庫已關閉: ${this.currentSessionId}`)
@@ -360,6 +365,9 @@ export class SessionManager extends EventEmitter {
     try {
       if (!this.hasActiveSession()) {
         throw new Error('沒有活躍會話，無法更新 WebSocket 資料')
+      }
+      if (Buffer.isBuffer(data)) {
+        data = data.toString()
       }
 
       return await this.updateSessionData(data)

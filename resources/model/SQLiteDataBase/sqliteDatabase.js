@@ -705,4 +705,56 @@ export class SQLiteDatabase {
   destroy() {
     this.close()
   }
+
+  /**
+   * 獲取並印出指定表的 Schema
+   * @param {string} tableName - 表名
+   */
+  async printTableSchema(tableName) {
+    try {
+      const db = this.getConnection()
+
+      // 檢查表是否存在
+      const tableExists = db
+        .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`)
+        .get(tableName)
+
+      if (!tableExists) {
+        console.log(`❌ 表 '${tableName}' 不存在`)
+        return null
+      }
+
+      console.log(`📊 Table Schema: ${tableName}`)
+      console.log('='.repeat(50))
+
+      // 獲取表結構
+      const columns = db.prepare(`PRAGMA table_info(${tableName})`).all()
+
+      columns.forEach((col) => {
+        const nullable = col.notnull ? 'NOT NULL' : 'NULL'
+        const primaryKey = col.pk ? ' (PRIMARY KEY)' : ''
+        const defaultValue = col.dflt_value ? ` DEFAULT ${col.dflt_value}` : ''
+
+        console.log(`  ${col.name}: ${col.type} ${nullable}${defaultValue}${primaryKey}`)
+      })
+
+      // 獲取索引資訊
+      const indexes = db.prepare(`PRAGMA index_list(${tableName})`).all()
+      if (indexes.length > 0) {
+        console.log('\n📋 Indexes:')
+        indexes.forEach((index) => {
+          const indexInfo = db.prepare(`PRAGMA index_info(${index.name})`).all()
+          const columns = indexInfo.map((info) => info.name).join(', ')
+          const unique = index.unique ? 'UNIQUE ' : ''
+          console.log(`  ${unique}${index.name}: (${columns})`)
+        })
+      }
+
+      console.log('='.repeat(50))
+      return columns
+    } catch (error) {
+      console.error(`❌ 獲取表 ${tableName} Schema 失敗:`, error)
+      throw error
+    }
+  }
 }

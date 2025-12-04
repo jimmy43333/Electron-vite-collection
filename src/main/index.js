@@ -2,13 +2,12 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import fs from 'fs'
-import { myvariable } from '../../resources/data/my_variable.js'
-import Logger from '../../resources/model/logger.js'
-import FileWatcher from '../../resources/model/fileWatcher.js'
-import * as jsonStorage from '../../resources/model/jsonStorage.js'
 import registerRunPythonHandler from '../../resources/model/runPython.js'
-import { SessionManager } from '../../resources/model/SQLiteDataBase/SessionManager.js'
+import { registerElectronJsonStorageHandlers } from '../../resources/model/ipcHandle/electronJsonStorageHandle.js'
+import { registerExternalConfigHandlers } from '../../resources/model/ipcHandle/externalConfigHandle.js'
+import { registerTerminalHandlers } from '../../resources/model/ipcHandle/terminalHandle.js'
+import { registerSessionManagerHandlers } from '../../resources/model/ipcHandle/sessionManagerHandle.js'
+import { registerWebSocketClientHandlers } from '../../resources/model/ipcHandle/websocketClientHandle.js'
 
 // Add global error handling for unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
@@ -21,9 +20,9 @@ process.on('uncaughtException', (error) => {
   // Application specific logging, throwing an error, or other logic here
 })
 
-const logger = new Logger().log.scope('main')
 let mainWindow
 let sessionManager = new Map()
+let websocketClient = new Map()
 
 function createWindow() {
   // Create the browser window.
@@ -97,153 +96,22 @@ app.on('window-all-closed', () => {
 // 應用退出前清理
 app.on('before-quit', () => {})
 
-// In this file you can include the rest of your app"s specific main process
+// In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
 function IPChandlers() {
-  // maximum
+  // Basic window controls (keep these simple handlers here)
   ipcMain.on('maximum', () => {
     console.log('Maximum')
     mainWindow.setFullScreen(true)
     mainWindow.setResizable(true)
   })
 
-  // ping
   ipcMain.on('ping', () => console.log('pong'))
 
-  // save log
-  ipcMain.on('save_log', () => {
-    logger.info('This is an info log')
-    logger.error('This is an error log')
-  })
-
-  // terminal
-  let file_watcher = new FileWatcher(mainWindow.webContents)
-  let log_timer = null
-  ipcMain.on('terminal_control', (event, command, tag) => {
-    logger.info(`Received command: ${tag} ${command}`)
-    if (tag === 'Stop' || command === 'stop') {
-      // Stop the watcher if it exists
-      logger.info(`Stop watcher !!`)
-      file_watcher.stop_watch()
-      file_watcher.stop_tail()
-      if (log_timer) {
-        clearInterval(log_timer)
-        log_timer = null
-      }
-      event.reply('terminal_response', `Watcher stopped`)
-    }
-    if (tag === 'Refresh' && command === 'start') {
-      logger.info(`Start watcher !!`)
-      const logPath = `${myvariable.log_folder}/Desktop-GUI.log`
-      file_watcher.start_watch(logPath)
-    }
-    if (tag === 'Append' && command === 'start') {
-      logger.info(`Start tailing log !!`)
-      const logPath = `${myvariable.log_folder}/Desktop-GUI.log`
-      file_watcher.start_tail(logPath)
-      // Keep writing to the log file
-      if (log_timer) {
-        clearInterval(log_timer)
-        log_timer = null
-      }
-      log_timer = setInterval(() => {
-        logger.info('Timer log entry at ' + new Date().toISOString())
-      }, 2000)
-    }
-    event.reply('terminal_response', `Command received: ${command}`)
-  })
-
-  // electron-json-storage
-  ipcMain.on('get_electron_json_storage', async (event, key) => {
-    event.returnValue = await jsonStorage.getElectronJsonStorage(key)
-  })
-
-  ipcMain.on('set_electron_json_storage', async (event, key, data) => {
-    let dataToSave = JSON.parse(data)
-    event.returnValue = await jsonStorage.setElectronJsonStorage(key, dataToSave)
-  })
-
-  ipcMain.on('remove_electron_json_storage', async (event, key) => {
-    event.returnValue = await jsonStorage.removeElectronJsonStorage(key)
-  })
-
-  // 只更新 A 有的 key，B 的值覆蓋 A
-  function updateAWithB(a, b) {
-    for (const key in a) {
-      if (Object.prototype.hasOwnProperty.call(b, key)) {
-        // 如果是物件，遞迴處理
-        if (
-          typeof a[key] === 'object' &&
-          a[key] !== null &&
-          typeof b[key] === 'object' &&
-          b[key] !== null
-        ) {
-          updateAWithB(a[key], b[key])
-        } else {
-          a[key] = b[key]
-        }
-      }
-    }
-    return a
-  }
-
-  ipcMain.handle('getExternalConfig', async () => {
-    let base_data = null
-    let output_data = null
-    const basePath = app.isPackaged ? app.getAppPath() : process.cwd()
-    const projectDefault = `${myvariable.log_folder}/data/config.json`
-    // Check if the default config file exists
-    if (fs.existsSync(projectDefault)) {
-      try {
-        console.log('Reading external project base config from:', projectDefault)
-        base_data = JSON.parse(fs.readFileSync(projectDefault, 'utf-8'))
-      } catch (error) {
-        console.error(`Error reading external config file:`, error)
-      }
-    } else {
-      try {
-        console.log(`Reading default base config from: ${configPath}`)
-        const configPath = join(basePath, 'resources', 'data', 'config.json')
-        base_data = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
-      } catch (error) {
-        console.error(`Error reading default config file:`, error)
-      }
-    }
-    const exists = await jsonStorage.hasElectronJsonStorage('external-config')
-    if (exists && base_data) {
-      console.log('Reading external config from electron-json-storage')
-      output_data = await jsonStorage.getElectronJsonStorage('external-config')
-      output_data = updateAWithB(base_data, output_data)
-      return output_data
-    } else if (base_data) {
-      return base_data
-    }
-  })
-
-  ipcMain.handle('saveExternalConfig', async (event, updatedConfig) => {
-    // let dataToSave = JSON.parse(updatedConfig)
-    return await jsonStorage.setElectronJsonStorage('external-config', updatedConfig)
-  })
-
-  ipcMain.on('createSessionManager', async (event, key) => {
-    // Add key to  Map
-    if (!sessionManager.has(key)) {
-      const manager = new SessionManager(key)
-      sessionManager.set(key, manager)
-
-      // 監聽 SessionManager 事件並轉發到前端
-      manager.on('sessionCreated', (data) => {
-        mainWindow.webContents.send('session-created', { ...data, workspace: key })
-      })
-
-      manager.on('websocketDataUpdated', (data) => {
-        mainWindow.webContents.send('websocket-data-updated', { ...data, workspace: key })
-      })
-
-      manager.on('metaDataUpdated', (data) => {
-        mainWindow.webContents.send('meta-data-updated', { ...data, workspace: key })
-      })
-    }
-    event.returnValue = true
-  })
+  // Register all modular handlers with dependency injection
+  registerElectronJsonStorageHandlers()
+  registerExternalConfigHandlers()
+  registerTerminalHandlers(mainWindow)
+  registerSessionManagerHandlers(sessionManager, websocketClient, mainWindow)
+  registerWebSocketClientHandlers(websocketClient)
 }

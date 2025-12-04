@@ -3,119 +3,318 @@
     <h2>Receive websocket client and Store Data in SQLite Database</h2>
 
     <div class="workspace-buttons">
-      <button @click="createWorkspace('Summer')">Summer</button>
-      <button @click="createWorkspace('Winter')">Winter</button>
+      <button :class="{ active: currentWorkspace === 'Summer' }" @click="switchWorkspace('Summer')">
+        Summer
+      </button>
+      <button :class="{ active: currentWorkspace === 'Winter' }" @click="switchWorkspace('Winter')">
+        Winter
+      </button>
     </div>
 
-    <div class="event-listener">
-      <h3>即時事件監聽</h3>
-      <button :class="{ active: isListening }" @click="toggleEventListener">
-        {{ isListening ? '停止監聽' : '開始監聽' }}
-      </button>
-
-      <div v-if="events.length > 0" class="events-display">
-        <h4>最新事件 ({{ events.length }})</h4>
-        <div v-for="(event, index) in events.slice(0, 10)" :key="index" class="event-item">
-          <div class="event-header">
-            <span class="event-type">{{ event.type }}</span>
-            <span class="event-time">{{ event.timestamp }}</span>
-          </div>
-          <div class="event-data">
-            <strong>Workspace:</strong> {{ event.data.workspace }}<br />
-            <strong>Session ID:</strong> {{ event.data.sessionId }}
-            <div v-if="event.type === 'websocket-data-updated'">
-              <strong>Table:</strong> {{ event.data.tableName }}
-            </div>
-          </div>
+    <!-- WebSocket Control Buttons -->
+    <div class="websocket-controls">
+      <div class="control-section">
+        <h4>WebSocket Connection Control</h4>
+        <div class="connection-url">
+          <label for="wsUrl">WebSocket URL:</label>
+          <input
+            id="wsUrl"
+            v-model="workspaceConfigs[currentWorkspace].url"
+            type="text"
+            placeholder="ws://localhost:8080"
+            :disabled="workspaceConfigs[currentWorkspace].isConnected"
+          />
+        </div>
+        <div class="connection-status">
+          <span
+            :class="workspaceConfigs[currentWorkspace].isConnected ? 'connected' : 'disconnected'"
+          >
+            {{ workspaceConfigs[currentWorkspace].isConnected ? 'connected' : 'disconnected' }}
+          </span>
+        </div>
+        <div class="control-buttons">
+          <button :class="getToggleButtonClass()" @click="toggleConnection">
+            {{ getToggleButtonText() }}
+          </button>
         </div>
       </div>
+    </div>
+
+    <div class="virtual-list-container">
+      <Virtualizer :data="events" :item-size="120" :overscan="5" class="virtual-list">
+        <template #default="{ item }">
+          <div class="event-item">
+            <div class="event-header">
+              <span class="event-type">{{ item.type || 'unknown' }}</span>
+              <span class="event-time">{{ formatTime(item.timestamp) }}</span>
+            </div>
+            <div class="event-data">
+              <div><strong>Session:</strong> {{ item.sessionId || 'N/A' }}</div>
+              <div><strong>Direction:</strong> {{ item.direction || 'N/A' }}</div>
+              <div><strong>Size:</strong> {{ item.size || 0 }} bytes</div>
+              <div class="data-content">{{ truncateData(item.data) }}</div>
+            </div>
+          </div>
+        </template>
+      </Virtualizer>
     </div>
   </div>
 </template>
 
 <script setup>
 import { onMounted, ref, onUnmounted } from 'vue'
+import { Virtualizer } from 'virtua/vue'
 
+// 響應式數據
+const currentWorkspace = ref('Summer')
 const events = ref([])
-const isListening = ref(false)
 
-const createWorkspace = async (workspaceName) => {
-  await window.electron.ipcRenderer.sendSync('createSessionManager', workspaceName)
-  console.log(`Created SessionManager for workspace: ${workspaceName}`)
-}
+// 狀態檢查定時器
+let statusTimer = null
 
-const toggleEventListener = () => {
-  if (isListening.value) {
-    stopListening()
+// 當前活躍的監聽器
+let activeListeners = []
+
+// 為每個 workspace 保存不同的配置
+const workspaceConfigs = ref({
+  Summer: {
+    url: 'ws://localhost:8080',
+    isConnected: false,
+    launchConnection: false
+  },
+  Winter: {
+    url: 'ws://localhost:8081',
+    isConnected: false,
+    launchConnection: false
+  }
+})
+
+// 切換按鈕方法
+async function toggleConnection() {
+  if (workspaceConfigs.value[currentWorkspace.value].launchConnection) {
+    workspaceConfigs.value[currentWorkspace.value].launchConnection = false
+    stopStatusTimer()
+    await stopConnection()
   } else {
-    startListening()
+    workspaceConfigs.value[currentWorkspace.value].launchConnection = true
+    await startConnection()
+    // 啟動定時器檢查狀態
+    startStatusTimer()
   }
 }
 
-const startListening = () => {
-  if (window.sessionManager) {
-    isListening.value = true
+function getToggleButtonText() {
+  return workspaceConfigs.value[currentWorkspace.value].launchConnection
+    ? 'Stop Connection'
+    : 'Start Connection'
+}
 
-    window.sessionManager.onSessionCreated((event, data) => {
-      addEvent('session-created', data)
-    })
+function getToggleButtonClass() {
+  const baseClasses = ['toggle-btn']
+  if (workspaceConfigs.value[currentWorkspace.value].launchConnection) {
+    // 已連接時顯示深黃色 Stop Connection 按鈕
+    baseClasses.push('connected')
+  } else {
+    // 未連接時顯示深藍色 Start Connection 按鈕
+    baseClasses.push('disconnected')
+  }
+  return baseClasses
+}
 
-    window.sessionManager.onWebsocketDataUpdated((event, data) => {
-      addEvent('websocket-data-updated', data)
-    })
+// 監聽後端事件
+async function switchWorkspace(workspace) {
+  console.log(`Switching to workspace: ${workspace}`)
 
-    window.sessionManager.onMetaDataUpdated((event, data) => {
-      addEvent('meta-data-updated', data)
-    })
+  // 清理之前的監聽器
+  cleanupListeners()
 
-    console.log('Event listening started')
+  // 設置新的 workspace (計算屬性會自動更新 URL 和狀態)
+  currentWorkspace.value = workspace
+
+  try {
+    // 確保 SessionManager 存在
+    await window.electron.ipcRenderer.sendSync('createSessionManager', workspace)
+
+    // 從後端獲取最新 50 筆資料
+    const workspaceEvents = await window.electron.ipcRenderer.invoke(
+      'getWorkspaceEvents',
+      workspace,
+      50
+    )
+    events.value = workspaceEvents
+
+    // 設置新的監聽器
+    setupListeners(workspace)
+
+    // 檢查當前連接狀態
+    await checkConnectionStatus()
+  } catch (error) {
+    console.error(`Failed to switch to workspace ${workspace}:`, error)
   }
 }
 
-const stopListening = () => {
-  if (window.sessionManager) {
-    window.sessionManager.removeAllListeners('session-created')
-    window.sessionManager.removeAllListeners('websocket-data-updated')
-    window.sessionManager.removeAllListeners('meta-data-updated')
-
-    isListening.value = false
-    console.log('Event listening stopped')
+function setupListeners(workspace) {
+  const sessionCreatedListener = (event, data) => {
+    console.log(`[${workspace}] Session Created:`, data)
+    addNewEvent({
+      id: `session-${Date.now()}`,
+      type: 'session-created',
+      timestamp: Date.now(),
+      data: data,
+      workspace: workspace
+    })
   }
+
+  const websocketDataUpdatedListener = (event, data) => {
+    console.log(`[${workspace}] WebSocket Data Updated:`, data)
+    addNewEvent({
+      id: `websocket-${Date.now()}`,
+      type: 'websocket-data-updated',
+      timestamp: data.data.timestamp || Date.now(),
+      data: data.data,
+      workspace: workspace
+    })
+  }
+
+  const metaDataUpdatedListener = (event, data) => {
+    console.log(`[${workspace}] Meta Data Updated:`, data)
+    addNewEvent({
+      id: `meta-${Date.now()}`,
+      type: 'meta-data-updated',
+      timestamp: Date.now(),
+      data: data,
+      workspace: workspace
+    })
+  }
+
+  // 添加監聽器
+  window.electron.ipcRenderer.on(`session-created-${workspace}`, sessionCreatedListener)
+  window.electron.ipcRenderer.on(
+    `websocket-data-updated-${workspace}`,
+    websocketDataUpdatedListener
+  )
+  window.electron.ipcRenderer.on(`meta-data-updated-${workspace}`, metaDataUpdatedListener)
+
+  // 記錄活躍的監聽器
+  activeListeners = [
+    { event: `session-created-${workspace}`, listener: sessionCreatedListener },
+    { event: `websocket-data-updated-${workspace}`, listener: websocketDataUpdatedListener },
+    { event: `meta-data-updated-${workspace}`, listener: metaDataUpdatedListener }
+  ]
 }
 
-const addEvent = (type, data) => {
-  const event = {
-    type,
-    data,
-    timestamp: new Date().toLocaleTimeString()
-  }
+function cleanupListeners() {
+  // 移除所有活躍的監聽器
+  activeListeners.forEach(({ event, listener }) => {
+    window.electron.ipcRenderer.removeListener(event, listener)
+  })
+  activeListeners = []
+}
 
+function addNewEvent(event) {
+  // 添加新事件到列表頂部
   events.value.unshift(event)
 
-  // 保留最新的 50 個事件
-  if (events.value.length > 50) {
-    events.value = events.value.slice(0, 50)
+  // 限制最多顯示 100 筆資料
+  if (events.value.length > 100) {
+    events.value = events.value.slice(0, 100)
+  }
+}
+
+function formatTime(timestamp) {
+  return new Date(timestamp).toLocaleString()
+}
+
+function truncateData(data) {
+  if (typeof data === 'string' && data.length > 100) {
+    return data.substring(0, 100) + '...'
+  }
+  return data
+}
+
+async function startConnection() {
+  const url = workspaceConfigs.value[currentWorkspace.value].url
+  if (!url || url.trim() === '') {
+    return
+  }
+
+  try {
+    // 驗證 URL 格式
+    new URL(url)
+  } catch (urlError) {
+    console.error('Invalid URL format:', url)
+    return
+  }
+
+  try {
+    // 先創建測試 Session
+    await window.electron.ipcRenderer.invoke('createTestSession', currentWorkspace.value)
+    // 再啟動連接
+    await window.electron.ipcRenderer.invoke('startConnection', currentWorkspace.value, url)
+  } catch (error) {
+    console.error('Failed to start connection:', error)
+  }
+}
+
+async function stopConnection() {
+  try {
+    // 先停止連接
+    await window.electron.ipcRenderer.invoke('stopConnection', currentWorkspace.value)
+    workspaceConfigs.value[currentWorkspace.value].isConnected = false
+    // 再關閉測試 Session
+    await window.electron.ipcRenderer.invoke('closeTestSession', currentWorkspace.value)
+  } catch (error) {
+    console.error('Failed to stop connection:', error)
+  }
+}
+
+// 檢查連接狀態的方法
+async function checkConnectionStatus() {
+  try {
+    const result = await window.electron.ipcRenderer.invoke(
+      'checkConnection',
+      currentWorkspace.value
+    )
+    const connected = result.status === 'connected'
+    workspaceConfigs.value[currentWorkspace.value].isConnected = connected
+  } catch (error) {
+    console.error('Failed to check connection status:', error)
+    workspaceConfigs.value[currentWorkspace.value].isConnected = false
+  }
+}
+
+// 開始狀態檢查定時器
+function startStatusTimer() {
+  stopStatusTimer() // 確保沒有重複的定時器
+  statusTimer = setInterval(checkConnectionStatus, 1000) // 每秒檢查一次
+}
+
+// 停止狀態檢查定時器
+function stopStatusTimer() {
+  if (statusTimer) {
+    clearInterval(statusTimer)
+    statusTimer = null
   }
 }
 
 onMounted(async () => {
-  await createWorkspace('Summer')
-  await createWorkspace('Winter')
+  // 初始化創建 SessionManager
+  window.electron.ipcRenderer.sendSync('createSessionManager', 'Summer')
+  window.electron.ipcRenderer.sendSync('createSessionManager', 'Winter')
 })
 
 onUnmounted(() => {
-  if (isListening.value) {
-    stopListening()
-  }
+  cleanupListeners()
+  stopStatusTimer() // 清理定時器
 })
 </script>
 
 <style lang="less" scoped>
 .out-box {
   width: 100%;
-  height: 100%;
-  padding: 50px;
-  overflow-y: scroll;
+  height: 100vh;
+  padding: 20px;
+  overflow: scroll;
 }
 
 .workspace-buttons {
@@ -125,68 +324,180 @@ onUnmounted(() => {
 .workspace-buttons button {
   margin-right: 10px;
   padding: 10px 20px;
-  background: #007bff;
+  background: #585858;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  transition: background-color 0.2s;
 }
 
 .workspace-buttons button:hover {
-  background: #0056b3;
+  background: #ff9100;
 }
 
-.event-listener {
-  margin-top: 30px;
+.workspace-buttons button.active {
+  background: #924200;
+  color: white;
+}
+
+/* WebSocket Controls Styling */
+.websocket-controls {
+  margin: 20px 0;
   padding: 20px;
-  background: #5f5f5f;
-  border-radius: 8px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+  border-left: 4px solid #002853;
 }
 
-.event-listener button {
-  padding: 8px 16px;
-  border: 1px solid #ccc;
-  background: #313131;
+.control-section h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+}
+
+.connection-status {
+  margin-bottom: 15px;
+}
+
+.connection-status .connected {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.connection-status .connecting {
+  color: #ffc107;
+  font-weight: bold;
+}
+
+.connection-status .disconnecting {
+  color: #ffc107;
+  font-weight: bold;
+}
+
+.connection-status .disconnected {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.control-buttons {
+  margin-bottom: 10px;
+}
+
+.control-buttons button {
+  margin-right: 10px;
+  padding: 10px 20px;
+  border: none;
   border-radius: 4px;
   cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-.event-listener button.active {
-  background: #28a745;
+.control-buttons .toggle-btn {
   color: white;
-  border-color: #28a745;
+  transition: background-color 0.3s ease;
+  font-weight: bold;
 }
 
-.events-display {
-  margin-top: 20px;
+.control-buttons .toggle-btn.connected {
+  background: #b8860b; /* 深黃色 - Stop Connection */
+}
+
+.control-buttons .toggle-btn.disconnected {
+  background: #002853; /* 深藍色 - Start Connection */
+}
+
+.control-buttons .toggle-btn.connecting {
+  background: #6c757d;
+  color: white;
+  cursor: not-allowed;
+}
+
+.control-buttons .toggle-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.connection-url {
+  margin-top: 10px;
+}
+
+.connection-url input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+
+.virtual-list-container {
+  height: 400px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.virtual-list {
+  height: 100%;
+  width: 100%;
 }
 
 .event-item {
   background: white;
-  margin: 10px 0;
   padding: 12px;
+  margin: 4px 8px;
   border-radius: 4px;
-  border-left: 4px solid #007bff;
+  border-left: 4px solid #002853;
+  border: 1px solid #eee;
+  height: 120px;
+  box-sizing: border-box;
 }
 
 .event-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #eee;
 }
 
 .event-type {
   font-weight: bold;
   color: #333;
+  background: #e9ecef;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
 }
 
 .event-time {
-  font-size: 12px;
+  font-size: 11px;
   color: #666;
 }
 
 .event-data {
-  font-size: 14px;
+  font-size: 13px;
   color: #555;
+}
+
+.event-data div {
+  margin: 2px 0;
+}
+
+.event-data strong {
+  color: #333;
+  margin-right: 5px;
+}
+
+.data-content {
+  margin-top: 8px;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 11px;
+  max-height: 40px;
+  overflow: hidden;
+  word-break: break-all;
 }
 </style>
