@@ -60,7 +60,7 @@ export class SessionManager extends EventEmitter {
   async initializeMetaDatabase() {
     try {
       await this.meta_db.createTables(META_DB_SCHEMA)
-      await this.meta_db.printTableSchema('sessions')
+      // await this.meta_db.printTableSchema('sessions')
       console.log(`✅ Meta 資料庫初始化完成`)
     } catch (error) {
       console.error(`❌ Meta 資料庫初始化失敗:`, error)
@@ -93,8 +93,8 @@ export class SessionManager extends EventEmitter {
       await session_db.createTables(SESSION_DB_SCHEMA)
 
       // 設置 WebSocket 資料表的輪轉配置（每個表最多 10000 條記錄）
-      if (SESSION_DB_SCHEMA.websocket_data) {
-        session_db.setTableRotationConfig('websocket_data', 10000, SESSION_DB_SCHEMA.websocket_data)
+      if (SESSION_DB_SCHEMA.websocketData) {
+        session_db.setTableRotationConfig('websocketData', 10000, SESSION_DB_SCHEMA.websocketData)
       }
 
       // 創建會話 meta 表（用於在會話資料庫中也存一份 meta 資料）
@@ -162,9 +162,7 @@ export class SessionManager extends EventEmitter {
       const websocketData = {
         sessionId: session_id,
         timestamp: data.timestamp || Date.now(),
-        type: data.type || 'message',
         data: typeof data.data === 'string' ? data.data : JSON.stringify(data.data),
-        direction: data.direction || 'unknown',
         size: data.size || (data.data ? JSON.stringify(data.data).length : 0)
       }
 
@@ -174,7 +172,6 @@ export class SessionManager extends EventEmitter {
       console.log(`📝 WebSocket 資料已更新: ${session_id} -> ${result.tableName}`)
       this.emit('websocketDataUpdated', {
         sessionId: session_id,
-        tableName: result.tableName,
         data: websocketData
       })
 
@@ -200,12 +197,11 @@ export class SessionManager extends EventEmitter {
       const updateTime = new Date().toISOString()
 
       // 1. 更新 Meta 資料庫中的 sessions 表
-      if (data.sessionId || data.testName || data.description || data.status || data.result) {
+      if (data.sessionId || data.testName || data.description || data.status) {
         const metaUpdates = {}
         if (data.testName !== undefined) metaUpdates.testName = data.testName
         if (data.description !== undefined) metaUpdates.description = data.description
         if (data.status !== undefined) metaUpdates.status = data.status
-        if (data.result !== undefined) metaUpdates.result = data.result
         if (data.endTime !== undefined) metaUpdates.testEndTime = data.endTime
         if (data.testEndTime !== undefined) metaUpdates.testEndTime = data.testEndTime
         if (data.summary !== undefined) metaUpdates.summary = JSON.stringify(data.summary)
@@ -276,7 +272,7 @@ export class SessionManager extends EventEmitter {
       if (this.currentSessionDb) {
         const session_db = this.currentSessionDb
         // 獲取 WebSocket 資料統計
-        const websocketStats = await session_db.getTableRotationStats('websocket_data')
+        const websocketStats = await session_db.getTableRotationStats('websocketData')
         sessionInfo.websocketStats = websocketStats
 
         // 獲取會話 meta 資料
@@ -369,11 +365,22 @@ export class SessionManager extends EventEmitter {
       if (Buffer.isBuffer(data)) {
         data = data.toString()
       }
-
-      return await this.updateSessionData(data)
+      data = JSON.parse(data)
+      let action = null
+      if (data.action) {
+        //get action and remove action from data to avoid confusion
+        action = data.action
+        delete data.action
+      }
+      if (action == 'update_result') {
+        return await this.updateSessionData(data)
+      } else if (action == 'update_meta') {
+        return await this.updateMetaData(data)
+      } else {
+        throw new Error(`未知的 action 類型: ${action}`)
+      }
     } catch (error) {
       console.error(`❌ 更新 WebSocket 資料失敗:`, error)
-      throw error
     }
   }
 }

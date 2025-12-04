@@ -56,6 +56,9 @@ export const META_DB_SCHEMA = {
       updatedAt: {
         type: 'TEXT',
         notNull: true
+      },
+      summary: {
+        type: 'TEXT'
       }
     },
     indexes: [
@@ -144,15 +147,48 @@ export const SESSION_DB_SCHEMA = {
         type: 'TEXT',
         notNull: true
       },
-      startTime: {
+      workspace: {
         type: 'TEXT',
         notNull: true
       },
-      rotationSequence: {
-        type: 'INTEGER',
-        default: 1
+      description: {
+        type: 'TEXT',
+        default: "''"
       },
-      previousDbPath: {
+      status: {
+        type: 'TEXT',
+        notNull: true,
+        default: "'created'"
+      },
+      testStartTime: {
+        type: 'TEXT'
+      },
+      testEndTime: {
+        type: 'TEXT'
+      },
+      recordCount: {
+        type: 'INTEGER',
+        default: 0
+      },
+      dataSize: {
+        type: 'INTEGER',
+        default: 0
+      },
+      rotationPolicy: {
+        type: 'TEXT'
+      },
+      dbPath: {
+        type: 'TEXT'
+      },
+      createdAt: {
+        type: 'TEXT',
+        notNull: true
+      },
+      updatedAt: {
+        type: 'TEXT',
+        notNull: true
+      },
+      summary: {
         type: 'TEXT'
       }
     }
@@ -174,23 +210,13 @@ export const SESSION_DB_SCHEMA = {
         type: 'INTEGER',
         notNull: true
       },
-      messageType: {
-        type: 'TEXT',
-        notNull: true
-      },
       data: {
         type: 'TEXT',
         notNull: true
       },
-      source: {
-        type: 'TEXT',
-        default: "'websocket'"
-      },
-      sequence: {
-        type: 'INTEGER'
-      },
       size: {
-        type: 'INTEGER'
+        type: 'INTEGER',
+        notNull: true
       }
     },
     indexes: [
@@ -202,63 +228,6 @@ export const SESSION_DB_SCHEMA = {
       {
         name: 'idx_websocket_timestamp',
         columns: ['timestamp'],
-        unique: false
-      },
-      {
-        name: 'idx_websocket_type',
-        columns: ['messageType'],
-        unique: false
-      },
-      {
-        name: 'idx_websocket_sequence',
-        columns: ['sequence'],
-        unique: false
-      }
-    ]
-  },
-
-  // 測試事件表
-  testEvents: {
-    columns: {
-      id: {
-        type: 'INTEGER',
-        primary: true,
-        autoIncrement: true
-      },
-      sessionId: {
-        type: 'TEXT',
-        notNull: true
-      },
-      timestamp: {
-        type: 'INTEGER',
-        notNull: true
-      },
-      eventType: {
-        type: 'TEXT',
-        notNull: true
-      },
-      eventData: {
-        type: 'TEXT'
-      },
-      severity: {
-        type: 'TEXT',
-        default: "'info'"
-      }
-    },
-    indexes: [
-      {
-        name: 'idx_events_session_id',
-        columns: ['sessionId'],
-        unique: false
-      },
-      {
-        name: 'idx_events_timestamp',
-        columns: ['timestamp'],
-        unique: false
-      },
-      {
-        name: 'idx_events_type',
-        columns: ['eventType'],
         unique: false
       }
     ]
@@ -274,9 +243,10 @@ export const SQL_QUERIES = {
     // 會話管理
     CREATE_SESSION: `
       INSERT INTO sessions (
-        sessionId, testName, description, status, rotationPolicy,
-        config, tags, metadata, createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        sessionId, testName, workspace, description, status,
+        testStartTime, testEndTime, recordCount, dataSize,
+        rotationPolicy, dbPath, createdAt, updatedAt, summary
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
 
     UPDATE_SESSION_STATUS: `
@@ -328,8 +298,10 @@ export const SQL_QUERIES = {
     // 會話資訊
     INIT_SESSION_INFO: `
       INSERT OR REPLACE INTO sessionInfo (
-        sessionId, testName, startTime, rotationSequence, previousDbPath
-      ) VALUES (?, ?, ?, ?, ?)
+        sessionId, testName, workspace, description, status,
+        testStartTime, testEndTime, recordCount, dataSize,
+        rotationPolicy, dbPath, createdAt, updatedAt, summary
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
 
     GET_SESSION_INFO: `
@@ -339,8 +311,8 @@ export const SQL_QUERIES = {
     // WebSocket 資料
     INSERT_WEBSOCKET_DATA: `
       INSERT INTO websocketData (
-        sessionId, timestamp, messageType, data, source, sequence, size
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        sessionId, timestamp, data, size
+      ) VALUES (?, ?, ?, ?)
     `,
 
     GET_WEBSOCKET_DATA: `
@@ -363,20 +335,6 @@ export const SQL_QUERIES = {
       WHERE sessionId = ?
       ORDER BY timestamp DESC
       LIMIT 1
-    `,
-
-    // 測試事件
-    INSERT_TEST_EVENT: `
-      INSERT INTO testEvents (
-        sessionId, timestamp, eventType, eventData, severity
-      ) VALUES (?, ?, ?, ?, ?)
-    `,
-
-    GET_TEST_EVENTS: `
-      SELECT * FROM testEvents
-      WHERE sessionId = ?
-      ORDER BY timestamp DESC
-      LIMIT ?
     `,
 
     // 統計查詢

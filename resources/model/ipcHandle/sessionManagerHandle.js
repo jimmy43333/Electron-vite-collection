@@ -52,7 +52,7 @@ export function registerSessionManagerHandlers(sessionManager, websocketClient, 
 
       // 獲取最新的 websocket 資料 - 使用輪轉表查詢
       const websocketData = await manager.currentSessionDb.selectFromRotatedTables(
-        'websocket_data',
+        'websocketData',
         {},
         {
           orderBy: 'timestamp',
