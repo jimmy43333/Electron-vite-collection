@@ -300,6 +300,104 @@ export class SessionManager extends EventEmitter {
   }
 
   /**
+   * 獲取所有 sessions 資訊（從 meta 資料庫）
+   * @param {Object} options - 查詢選項
+   * @param {number} options.limit - 限制返回數量
+   * @param {string} options.orderBy - 排序字段，預設為 'createdAt'
+   * @param {string} options.order - 排序方式，'ASC' 或 'DESC'，預設為 'DESC'
+   * @param {string} options.status - 篩選狀態
+   * @returns {Promise<Array>} sessions 列表
+   */
+  async getHistorySessions(options = {}) {
+    try {
+      const { limit = 100, orderBy = 'createdAt', order = 'DESC', status = null } = options
+
+      let whereClause = {}
+      if (status) {
+        whereClause.status = status
+      }
+
+      const sessions = await this.meta_db.select('sessions', whereClause, {
+        orderBy: orderBy,
+        order: order,
+        limit: limit
+      })
+
+      console.log(`✅ 獲取 sessions 成功，共 ${sessions.length} 筆資料`)
+      return sessions
+    } catch (error) {
+      console.error(`❌ 獲取 sessions 失敗:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * 根據 sessionId 獲取特定 session 的詳細資訊
+   * @param {string} sessionId - session ID
+   * @returns {Promise<Object|null>} session 詳細資訊
+   */
+  async getHistorySessionInfo(sessionId) {
+    try {
+      const sessions = await this.meta_db.select('sessions', { sessionId: sessionId })
+      return sessions.length > 0 ? sessions[0] : null
+    } catch (error) {
+      console.error(`❌ 獲取 session 詳細資訊失敗:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * 根據 sessionId 獲取特定 session 的 WebSocket 資料
+   * @param {string} sessionId - session ID
+   * @param {number} limit - 資料筆數限制
+   * @returns {Promise<Array>} WebSocket 資料列表
+   */
+  async getSessionWebSocketData(sessionId, limit = 50) {
+    try {
+      // 首先檢查 session 是否存在
+      const session = await this.getHistorySessionInfo(sessionId)
+      if (!session) {
+        throw new Error(`Session ${sessionId} not found`)
+      }
+
+      // 開啟對應的 session 資料庫
+      const sessionDbPath = session.dbPath
+      if (!fs.existsSync(sessionDbPath)) {
+        throw new Error(`Session database not found: ${sessionDbPath}`)
+      }
+
+      const sessionDb = new SQLiteDatabase(sessionDbPath)
+
+      try {
+        // // 設置 WebSocket 資料表的輪轉配置（與創建時相同的配置）
+        if (SESSION_DB_SCHEMA.websocketData) {
+          sessionDb.setTableRotationConfig('websocketData', 10000, SESSION_DB_SCHEMA.websocketData)
+        }
+
+        // 從輪轉表中獲取資料
+        const websocketData = await sessionDb.selectFromRotatedTables(
+          'websocketData',
+          {},
+          {
+            orderBy: 'timestamp',
+            order: 'DESC',
+            limit: limit
+          }
+        )
+
+        console.log(`✅ 獲取 session ${sessionId} 的資料成功，共 ${websocketData.length} 筆`)
+        return websocketData
+      } finally {
+        // 關閉資料庫連接
+        sessionDb.close()
+      }
+    } catch (error) {
+      console.error(`❌ 獲取 session WebSocket 資料失敗:`, error)
+      throw error
+    }
+  }
+
+  /**
    * 關閉當前活躍會話
    */
   closeTestSession() {

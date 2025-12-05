@@ -39,8 +39,28 @@
         </div>
       </div>
     </div>
-
     <div class="virtual-list-container">
+      <div class="display-data">
+        <h2>&nbsp;&nbsp;Data</h2>
+        <select
+          v-if="!workspaceConfigs[currentWorkspace].launchConnection"
+          v-model="selectedSessionId"
+          :disabled="isLoadingSessions"
+          class="session-selector"
+          @change="onSessionChange"
+        >
+          <option value="" disabled>
+            {{ isLoadingSessions ? 'Loading sessions...' : 'Select a session' }}
+          </option>
+          <option
+            v-for="session in availableSessions"
+            :key="session.sessionId"
+            :value="session.sessionId"
+          >
+            ({{ formatTime(session.createdAt) }}) - {{ session.status }}
+          </option>
+        </select>
+      </div>
       <Virtualizer :data="events" :item-size="120" :overscan="5" class="virtual-list">
         <template #default="{ item }">
           <div class="event-item">
@@ -69,6 +89,11 @@ import { Virtualizer } from 'virtua/vue'
 const currentWorkspace = ref('Summer')
 const events = ref([])
 
+// Session 相關數據
+const availableSessions = ref([])
+const selectedSessionId = ref('')
+const isLoadingSessions = ref(false)
+
 // 狀態檢查定時器
 let statusTimer = null
 
@@ -78,7 +103,7 @@ let activeListeners = []
 // 為每個 workspace 保存不同的配置
 const workspaceConfigs = ref({
   Summer: {
-    url: 'ws://localhost:8080',
+    url: 'ws://localhost:8765',
     isConnected: false,
     launchConnection: false
   },
@@ -134,14 +159,6 @@ async function switchWorkspace(workspace) {
   try {
     // 確保 SessionManager 存在
     await window.electron.ipcRenderer.sendSync('createSessionManager', workspace)
-
-    // 從後端獲取最新 50 筆資料
-    const workspaceEvents = await window.electron.ipcRenderer.invoke(
-      'getWorkspaceEvents',
-      workspace,
-      50
-    )
-    events.value = workspaceEvents
 
     // 設置新的監聽器
     setupListeners(workspace)
@@ -238,6 +255,8 @@ async function startConnection() {
     return
   }
 
+  events.value = []
+
   try {
     // 驗證 URL 格式
     new URL(url)
@@ -263,6 +282,8 @@ async function stopConnection() {
     workspaceConfigs.value[currentWorkspace.value].isConnected = false
     // 再關閉測試 Session
     await window.electron.ipcRenderer.invoke('closeTestSession', currentWorkspace.value)
+    // 載入該 workspace 的所有 sessions
+    await loadAvailableSessions()
   } catch (error) {
     console.error('Failed to stop connection:', error)
   }
@@ -297,10 +318,55 @@ function stopStatusTimer() {
   }
 }
 
+// 載入該 workspace 的所有 sessions
+async function loadAvailableSessions() {
+  try {
+    isLoadingSessions.value = true
+    const sessions = await window.electron.ipcRenderer.invoke(
+      'getAllSessions',
+      currentWorkspace.value
+    )
+    availableSessions.value = sessions
+    console.log(`載入 ${currentWorkspace.value} 的 sessions:`, sessions)
+  } catch (error) {
+    console.error('Failed to load sessions:', error)
+    availableSessions.value = []
+  } finally {
+    isLoadingSessions.value = false
+  }
+}
+
+// 當 session 選擇改變時的處理方法
+async function onSessionChange() {
+  if (!selectedSessionId.value) {
+    events.value = []
+    return
+  }
+
+  try {
+    console.log(`切換到 session: ${selectedSessionId.value}`)
+
+    // 根據選中的 session 載入對應的數據
+    const sessionEvents = await window.electron.ipcRenderer.invoke(
+      'getSessionWebSocketData',
+      currentWorkspace.value,
+      selectedSessionId.value,
+      50
+    )
+    events.value = sessionEvents
+    console.log(`載入 session ${selectedSessionId.value} 的資料:`, sessionEvents.length, '筆')
+  } catch (error) {
+    console.error('Failed to load session data:', error)
+    events.value = []
+  }
+}
+
 onMounted(async () => {
   // 初始化創建 SessionManager
-  window.electron.ipcRenderer.sendSync('createSessionManager', 'Summer')
-  window.electron.ipcRenderer.sendSync('createSessionManager', 'Winter')
+  await window.electron.ipcRenderer.sendSync('createSessionManager', 'Summer')
+  await window.electron.ipcRenderer.sendSync('createSessionManager', 'Winter')
+  switchWorkspace('Summer')
+  await loadAvailableSessions()
 })
 
 onUnmounted(() => {
@@ -348,7 +414,7 @@ onUnmounted(() => {
   background: #f8f9fa;
   border-radius: 4px;
   border: 1px solid #dee2e6;
-  border-left: 4px solid #002853;
+  border-left: 4px solid #924200;
 }
 
 .control-section h4 {
@@ -404,7 +470,7 @@ onUnmounted(() => {
 }
 
 .control-buttons .toggle-btn.disconnected {
-  background: #002853; /* 深藍色 - Start Connection */
+  background: #924200; /* 深橘色 - Start Connection */
 }
 
 .control-buttons .toggle-btn.connecting {
@@ -429,11 +495,42 @@ onUnmounted(() => {
   border-radius: 4px;
 }
 
-.virtual-list-container {
-  height: 400px;
-  border: 1px solid #ddd;
+.display-data {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  justify-content: space-between;
+}
+
+.session-selector {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
   border-radius: 4px;
-  overflow: hidden;
+  background-color: white;
+  font-size: 14px;
+  color: #333;
+  max-width: 200px;
+  cursor: pointer;
+}
+
+.session-selector:disabled {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  cursor: not-allowed;
+}
+
+.session-selector:focus {
+  outline: none;
+  border-color: #924200;
+  box-shadow: 0 0 0 2px rgba(146, 66, 0, 0.2);
+}
+
+.virtual-list-container {
+  width: 100%;
+  height: 400px;
+  border: 1px solid #000000;
+  border-radius: 4px;
+  overflow: scroll;
 }
 
 .virtual-list {
@@ -446,9 +543,8 @@ onUnmounted(() => {
   padding: 12px;
   margin: 4px 8px;
   border-radius: 4px;
-  border-left: 4px solid #002853;
-  border: 1px solid #eee;
-  height: 120px;
+  border: 1px dotted #0d00c0;
+  height: auto;
   box-sizing: border-box;
 }
 
@@ -458,7 +554,7 @@ onUnmounted(() => {
   align-items: center;
   margin-bottom: 8px;
   padding-bottom: 4px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #818181;
 }
 
 .event-type {

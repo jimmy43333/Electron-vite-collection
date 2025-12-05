@@ -40,6 +40,9 @@ export class WebSocketClient {
       console.log(`✓ WebSocket ${this.clientKey} connected`)
       this.reconnectAttempts = 0
 
+      // 初始化 isAlive 屬性
+      ws.isAlive = true
+
       // 開始 ping 檢測
       this.startPing()
     })
@@ -58,7 +61,9 @@ export class WebSocketClient {
 
     ws.on('pong', () => {
       // 收到 pong 響應，連接正常
-      ws.isAlive = true
+      if (ws) {
+        ws.isAlive = true
+      }
     })
 
     this.connection = ws
@@ -89,6 +94,10 @@ export class WebSocketClient {
       case WebSocket.CONNECTING:
         return 'connecting'
       case WebSocket.OPEN:
+        // 檢查連接是否真的活躍
+        if (this.connection.isAlive === false) {
+          return 'disconnected'
+        }
         return 'connected'
       case WebSocket.CLOSING:
         return 'closing'
@@ -199,13 +208,13 @@ export class WebSocketClient {
     if (!this.connection) return
 
     this.pingIntervalId = setInterval(() => {
-      if (this.connection.readyState === WebSocket.OPEN) {
+      if (this.connection && this.connection.readyState === WebSocket.OPEN) {
         this.connection.isAlive = false
         this.connection.ping()
 
         // 如果在指定時間內沒有收到 pong，則關閉連接
         setTimeout(() => {
-          if (!this.connection.isAlive) {
+          if (this.connection && this.connection.isAlive === false) {
             console.log(`No pong received from ${this.clientKey}, terminating connection`)
             this.connection.terminate()
           }
